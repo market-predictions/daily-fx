@@ -157,7 +157,7 @@ DATE_STR = datetime.now().strftime("%Y-%m-%d")
 # set2 is a complementary cross-heavy basket.
 BACKTEST_SYMBOLS_SET1 = ["EURUSD", "USDJPY", "GBPUSD", "AUDUSD", "USDCAD", "USDCHF", "EURJPY", "AUDNZD"]
 BACKTEST_SYMBOLS_SET2 = ["EURGBP", "GBPJPY", "EURCHF", "CADJPY", "EURAUD", "GBPCAD", "AUDCHF", "NZDCAD"]
-BACKTEST_SYMBOLS_SWITCH = "set1"   # choose: "set1", "set2", "both"
+BACKTEST_SYMBOLS_SWITCH = "both"   # choose: "set1", "set2", "both"
 
 def resolve_backtest_symbols(symbol_switch: str):
     mode = str(symbol_switch or "set1").strip().lower()
