@@ -22,10 +22,19 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Generate prediction zip
+      - name: Generate prediction files
         run: |
           python scripts/generate_predictions.py
+
+      - name: Show generated files
+        run: |
+          echo "Root:"
+          ls -lah
+          echo ""
+          echo "build_predictions:"
+          ls -lah build_predictions || true
 
       - name: Upload prediction artifacts
         uses: actions/upload-artifact@v4
@@ -34,3 +43,4 @@ jobs:
           path: |
             Today_Predictions.zip
             build_predictions/
+          if-no-files-found: error
