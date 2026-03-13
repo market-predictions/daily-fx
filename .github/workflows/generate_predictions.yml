@@ -28,7 +28,9 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      - name: Run v5.51 generator
+      - name: Run generator
+        env:
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
         run: |
           python prediction.py
 
