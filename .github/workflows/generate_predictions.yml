@@ -30,7 +30,7 @@ jobs:
 
       - name: Run v5.51 generator
         run: |
-          python fxbias-backtest-calibration-8pairs-20days-mastertable-v5.51.py
+          python prediction.py
 
       - name: Show latest outputs
         run: |
