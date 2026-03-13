@@ -194,10 +194,17 @@ BASE_DIR = setup_output_base_dir()
 OUTDIR = BASE_DIR / f"{DATE_STR}_FX_BACKTEST_CALIBRATION_BATCH_{len(SYMBOLS)}PAIRS_20D_{BACKTEST_SYMBOLS_LABEL}"
 OUTDIR.mkdir(parents=True, exist_ok=True)
 
+LATEST_DIR = BASE_DIR / "daily_outputs" / "latest"
+LATEST_DIR.mkdir(parents=True, exist_ok=True)
+
 if not OUTDIR.exists():
     raise RuntimeError(f"Failed to create output directory: {OUTDIR}")
 if not OUTDIR.is_dir():
     raise RuntimeError(f"Output path exists but is not a directory: {OUTDIR}")
+if not LATEST_DIR.exists():
+    raise RuntimeError(f"Failed to create latest output directory: {LATEST_DIR}")
+if not LATEST_DIR.is_dir():
+    raise RuntimeError(f"Latest output path exists but is not a directory: {LATEST_DIR}")
 
 PDFfilename = f"{DATE_STR}_FX_BACKTEST_CALIBRATION_PACK_{BACKTEST_SYMBOLS_LABEL}.pdf"
 
@@ -241,8 +248,9 @@ REJECTION_CLOSEBACK_FRAC = 0.20
 BOTH_SIDES_LOOKBACK = 12
 EVENT_RECENCY_LOOKBACK = 8
 
-SCRIPT_VERSION = "v5.5-backtest-calibration-and-prediction-8pairs-20days-mastertable"
+SCRIPT_VERSION = "v5.51-backtest-calibration-and-prediction-8pairs-20days-mastertable"
 CHANGE_LOG = [
+    "v5.51 github-latest export patch: added stable daily_outputs/latest exports with unsuffixed json/csv/txt prediction files plus Today_Predictions.zip for GitHub + ChatGPT reading.",
     "v5.4.1 prediction export release: added a separate contemporaneous-only today-prediction ranking for all symbols, exported setup-quality grades and readable factor breakdowns, and added integrity reporting that explicitly excludes verifier/outcome fields from prediction scoring.",
     "v5.3 symbol-set switch + safe naming release: built on v5.21, added BACKTEST_SYMBOLS_SET2 plus a set1/set2/both switch, pushed the selected set label into output directories and key filenames to avoid overwrite collisions, and expanded manifest metadata so each batch clearly records which symbol basket was used.",
     "v5.21 shadow recovery patch: preserved the v5.1 primary shortlist logic, added a safe fallback shadow-watchlist path for strong near-miss rows, exported shadow reason/order diagnostics, and kept blocked/gate-pass/relval rows out of the primary shortlist.",
@@ -4983,6 +4991,103 @@ def build_today_prediction_rows(cache: dict) -> tuple[list[dict], list[dict], di
     }
     return rows, integrity_rows, snapshot_meta
 
+
+
+def _safe_unlink(path: Path) -> None:
+    try:
+        if path.exists():
+            path.unlink()
+    except Exception:
+        pass
+
+
+def _json_dump(path: Path, payload) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(json_ready(payload), f, indent=2, ensure_ascii=False)
+
+
+def _write_text(path: Path, text: str) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def _prediction_summary_text(prediction_rows: list[dict], integrity_rows: list[dict], snapshot_meta: dict) -> str:
+    lines = []
+    lines.append("# today_prediction_summary")
+    lines.append("")
+    lines.append(f"prediction_score_version: {snapshot_meta.get('prediction_score_version')}")
+    lines.append(f"prediction_reference_timestamp: {snapshot_meta.get('prediction_reference_timestamp')}")
+    lines.append(f"snapshot_date: {snapshot_meta.get('snapshot_date')}")
+    lines.append(f"prediction_top_n: {snapshot_meta.get('prediction_top_n')}")
+    lines.append("")
+    lines.append("## integrity")
+    for row in integrity_rows:
+        lines.append(f"- {row.get('Metric')}: {row.get('Value')}")
+    lines.append("")
+    lines.append("## ranking")
+    for i, row in enumerate(prediction_rows, start=1):
+        inst = row.get("Instrument")
+        side = row.get("Preferred_Side")
+        grade10 = row.get("Setup_Quality_Grade_10")
+        grade100 = row.get("Setup_Quality_Grade_100")
+        band = row.get("Setup_Quality_Band")
+        entry = row.get("Best_Entry")
+        sl = row.get("SL")
+        tp1 = row.get("TP1")
+        tp2 = row.get("TP2")
+        lines.append(
+            f"{i}. {inst} | side={side} | grade10={grade10} | grade100={grade100} | "
+            f"band={band} | entry={entry} | sl={sl} | tp1={tp1} | tp2={tp2}"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def export_latest_prediction_files(latest_dir: Path, prediction_rows: list[dict], integrity_rows: list[dict], snapshot_meta: dict) -> dict:
+    latest_dir.mkdir(parents=True, exist_ok=True)
+
+    ranking_csv = latest_dir / "today_prediction_ranking.csv"
+    ranking_json = latest_dir / "today_prediction_ranking.json"
+    summary_txt = latest_dir / "today_prediction_summary.txt"
+    integrity_json = latest_dir / "prediction_integrity_report.json"
+    today_zip = latest_dir / "Today_Predictions.zip"
+
+    pred_df = pd.DataFrame(prediction_rows)
+
+    pred_df.to_csv(ranking_csv, index=False)
+    _json_dump(
+        ranking_json,
+        {
+            "snapshot_meta": snapshot_meta,
+            "predictions": prediction_rows,
+        },
+    )
+    _json_dump(
+        integrity_json,
+        {
+            "snapshot_meta": snapshot_meta,
+            "integrity_rows": integrity_rows,
+        },
+    )
+    _write_text(summary_txt, _prediction_summary_text(prediction_rows, integrity_rows, snapshot_meta))
+
+    _safe_unlink(today_zip)
+    with zipfile.ZipFile(today_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+        for fp in [ranking_json, ranking_csv, summary_txt, integrity_json]:
+            if fp.exists():
+                zf.write(fp, arcname=fp.name)
+
+    return {
+        "latest_prediction_files": [
+            ranking_json.name,
+            ranking_csv.name,
+            summary_txt.name,
+            integrity_json.name,
+        ],
+        "latest_today_predictions_zip": today_zip.name,
+    }
+
+
 def export_prediction_pack(outdir: Path, prediction_rows: list[dict], integrity_rows: list[dict], snapshot_meta: dict) -> dict:
     pred_df = pd.DataFrame(prediction_rows)
     integrity_df = pd.DataFrame(integrity_rows)
@@ -4998,14 +5103,13 @@ def export_prediction_pack(outdir: Path, prediction_rows: list[dict], integrity_
     integrity_md = outdir / f"prediction_integrity_report_{BACKTEST_SYMBOLS_LABEL}.md"
 
     pred_df.to_csv(full_csv, index=False)
-    with open(full_json, "w", encoding="utf-8") as f:
-        json.dump(json_ready(prediction_rows), f, indent=2, ensure_ascii=False)
+    _json_dump(full_json, prediction_rows)
 
     top_n = int(snapshot_meta.get("prediction_top_n", min(PREDICTION_TOP_N, len(pred_df))))
-    top_df = pred_df.head(top_n).copy()
+    top_rows = prediction_rows[: min(top_n, len(prediction_rows))]
+    top_df = pd.DataFrame(top_rows)
     top_df.to_csv(top_csv, index=False)
-    with open(top_json, "w", encoding="utf-8") as f:
-        json.dump(json_ready(top_df.to_dict(orient="records")), f, indent=2, ensure_ascii=False)
+    _json_dump(top_json, top_rows)
 
     md_cols = [c for c in ["Prediction_Rank", "Instrument", "Preferred_Side", "Setup_Quality_Grade_100", "Setup_Quality_Band", "Setup_Archetype", "Confidence_Band", "Prediction_Breakdown"] if c in pred_df.columns]
     with open(full_md, "w", encoding="utf-8") as f:
@@ -5018,24 +5122,39 @@ def export_prediction_pack(outdir: Path, prediction_rows: list[dict], integrity_
         f.write(top_df[md_cols].to_markdown(index=False) if (not top_df.empty and md_cols) else "No top prediction rows")
 
     integrity_df.to_csv(integrity_csv, index=False)
-    with open(integrity_json, "w", encoding="utf-8") as f:
-        json.dump(json_ready(integrity_rows), f, indent=2, ensure_ascii=False)
+    _json_dump(
+        integrity_json,
+        {
+            "snapshot_meta": snapshot_meta,
+            "integrity_rows": integrity_rows,
+        },
+    )
     with open(integrity_md, "w", encoding="utf-8") as f:
-        f.write("# Prediction Integrity Report\n\n")
         f.write(integrity_df.to_markdown(index=False) if not integrity_df.empty else "No integrity rows")
+
+    latest_export_info = export_latest_prediction_files(
+        latest_dir=LATEST_DIR,
+        prediction_rows=prediction_rows,
+        integrity_rows=integrity_rows,
+        snapshot_meta=snapshot_meta,
+    )
 
     return {
         "prediction_files": [full_csv.name, full_json.name, full_md.name, top_csv.name, top_json.name, top_md.name, integrity_csv.name, integrity_json.name, integrity_md.name],
         "prediction_reference_timestamp": snapshot_meta.get("prediction_reference_timestamp"),
         "prediction_top_n": top_n,
+        "today_predictions_zip": latest_export_info.get("latest_today_predictions_zip"),
+        "today_predictions_manifest": {
+            "latest_dir": str(LATEST_DIR),
+            "latest_prediction_files": latest_export_info.get("latest_prediction_files", []),
+            "latest_today_predictions_zip": latest_export_info.get("latest_today_predictions_zip"),
+        },
     }
-
 
 
 def export_today_predictions_bundle(outdir: Path, prediction_export_info: dict, snapshot_meta: dict) -> dict:
     prediction_files = list(prediction_export_info.get("prediction_files", []) or [])
-    if not prediction_files:
-        return {}
+    latest_manifest = dict(prediction_export_info.get("today_predictions_manifest", {}) or {})
     bundle_manifest = {
         "bundle_name": TODAY_PREDICTIONS_ZIP_NAME,
         "generated_at": datetime.now().isoformat(),
@@ -5045,45 +5164,32 @@ def export_today_predictions_bundle(outdir: Path, prediction_export_info: dict, 
         "prediction_reference_timestamp": snapshot_meta.get("prediction_reference_timestamp"),
         "snapshot_date": snapshot_meta.get("snapshot_date"),
         "preferred_input_order": [
+            "daily_outputs/latest/today_prediction_ranking.json",
+            "daily_outputs/latest/prediction_integrity_report.json",
+            "daily_outputs/latest/today_prediction_ranking.csv",
+            "daily_outputs/latest/today_prediction_summary.txt",
             f"today_prediction_ranking_{BACKTEST_SYMBOLS_LABEL}.json",
             f"today_prediction_top_{BACKTEST_SYMBOLS_LABEL}.json",
             f"prediction_integrity_report_{BACKTEST_SYMBOLS_LABEL}.json",
-            "matching csv files",
-            "matching md files",
-            f"prediction_ranglijst_{BACKTEST_SYMBOLS_LABEL}.txt",
         ],
         "included_files": prediction_files,
+        "latest_outputs": latest_manifest,
         "notes": [
             "JSON files are the primary truth if present.",
-            "Prediction bundle contains only prediction-related files.",
-            "This bundle is intended for the Top10 Prediction Auditor prompt.",
+            "Stable latest outputs are intended for GitHub + ChatGPT reading.",
+            "Dated batch files are preserved for archival review.",
         ],
     }
     manifest_path = outdir / "today_predictions_manifest.json"
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(json_ready(bundle_manifest), f, indent=2, ensure_ascii=False)
+    _json_dump(manifest_path, bundle_manifest)
+    return {
+        "today_predictions_bundle_manifest": manifest_path.name,
+        "today_predictions_manifest": {
+            **latest_manifest,
+            "bundle_manifest": manifest_path.name,
+        },
+    }
 
-    txt_fallback = outdir / f"prediction_ranglijst_{BACKTEST_SYMBOLS_LABEL}.txt"
-    ranking_csv = outdir / f"today_prediction_ranking_{BACKTEST_SYMBOLS_LABEL}.csv"
-    if ranking_csv.exists() and not txt_fallback.exists():
-        try:
-            ranking_df = pd.read_csv(ranking_csv)
-            lines = ["Prediction ranking fallback text", ""]
-            key_cols = [c for c in ["Prediction_Rank", "Instrument", "Preferred_Side", "Setup_Quality_Grade_10", "Setup_Quality_Band", "Best_Entry", "SL", "TP1", "TP2", "Prediction_Breakdown"] if c in ranking_df.columns]
-            for _, rr in ranking_df[key_cols].iterrows():
-                lines.append(" | ".join(f"{c}={rr[c]}" for c in key_cols))
-            txt_fallback.write_text("\n".join(lines), encoding="utf-8")
-            prediction_files.append(txt_fallback.name)
-        except Exception:
-            pass
-
-    zip_path = outdir / TODAY_PREDICTIONS_ZIP_NAME
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for name in sorted(set(prediction_files + [manifest_path.name])):
-            fp = outdir / name
-            if fp.exists() and fp.is_file():
-                zf.write(fp, arcname=fp.name)
-    return {"today_predictions_zip": zip_path.name, "today_predictions_manifest": manifest_path.name}
 
 def export_day_pack(day_outdir: Path, snapshot_date: str, summary_rows: list, shortlist_rows: list, manifest_extra: dict):
     day_outdir.mkdir(parents=True, exist_ok=True)
@@ -5646,6 +5752,9 @@ def main():
         "prediction_files": prediction_export_info.get("prediction_files", []),
         "today_predictions_zip": prediction_export_info.get("today_predictions_zip"),
         "today_predictions_manifest": prediction_export_info.get("today_predictions_manifest"),
+        "latest_output_dir": str(LATEST_DIR),
+        "latest_prediction_files": prediction_export_info.get("today_predictions_manifest", {}).get("latest_prediction_files", []),
+        "latest_today_predictions_zip": prediction_export_info.get("today_predictions_manifest", {}).get("latest_today_predictions_zip"),
         "batch_files": [],
     }
     changelog_path = OUTDIR / "CHANGELOG.md"
@@ -5660,6 +5769,7 @@ def main():
         f.write("- v5.5: fixed prediction snapshot clocking with build-time timestamp sanity checks.\n")
         f.write("- v5.5: recalibrated Setup_Quality_Band thresholds for more communicative prediction boards.\n")
         f.write("- v5.5: added Today_Predictions.zip bundle for prompt-native prediction review.\n")
+        f.write("- v5.51: added stable daily_outputs/latest exports with unsuffixed json/csv/txt prediction files for GitHub + ChatGPT reading.\n")
 
     batch_files = sorted([x for x in OUTDIR.iterdir() if x.is_file()])
     batch_manifest["batch_files"] = [fp.name for fp in batch_files]
@@ -5685,8 +5795,9 @@ def main():
     print("Calibration top candidates CSV:", shortlist_csv.resolve())
     if EXPORT_BATCH_ZIP:
         print("Batch ZIP file:", batch_zip_path.resolve())
-    if prediction_export_info.get("today_predictions_zip"):
-        print("Today Predictions ZIP:", (OUTDIR / prediction_export_info["today_predictions_zip"]).resolve())
+    if prediction_export_info.get("today_predictions_manifest", {}).get("latest_today_predictions_zip"):
+        print("Today Predictions ZIP:", (LATEST_DIR / prediction_export_info["today_predictions_manifest"]["latest_today_predictions_zip"]).resolve())
+    print("Latest output folder:", LATEST_DIR.resolve())
 
 if __name__ == "__main__":
     main()
