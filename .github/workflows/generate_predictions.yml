@@ -28,23 +28,23 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      - name: Generate prediction files
+      - name: Run v5.51 generator
         run: |
-          python scripts/generate_predictions.py
+          python fxbias-backtest-calibration-8pairs-20days-mastertable-v5.51.py
 
-      - name: Show generated files
+      - name: Show latest outputs
         run: |
           echo "daily_outputs/latest:"
-          ls -lah daily_outputs/latest
+          ls -lah daily_outputs/latest || true
 
-      - name: Upload prediction artifacts
+      - name: Upload latest prediction files
         uses: actions/upload-artifact@v4
         with:
           name: today-predictions-files
           path: daily_outputs/latest/
           if-no-files-found: error
 
-      - name: Commit latest outputs
+      - name: Commit latest outputs to repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
