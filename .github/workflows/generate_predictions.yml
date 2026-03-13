@@ -27,8 +27,10 @@ jobs:
         run: |
           python scripts/generate_predictions.py
 
-      - name: Upload prediction zip artifact
+      - name: Upload prediction artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: today-predictions-zip
-          path: Today_Predictions.zip
+          name: today-predictions-files
+          path: |
+            Today_Predictions.zip
+            build_predictions/
