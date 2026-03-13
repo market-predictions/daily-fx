@@ -1,7 +1,24 @@
-Generated at UTC: 2026-03-13T19:49:08.586631+00:00
-Prediction count: 3
+# today_prediction_summary
 
-Predictions:
-1. EURUSD | long | confidence=high | score=0.86 | entry=1.1 | stop=1.095 | tp=1.11 | setup=continuation
-2. BTCUSD | short | confidence=medium | score=0.78 | entry=82000 | stop=83500 | tp=79000 | setup=reversal_after_sweep
-3. XAUUSD | long | confidence=medium | score=0.74 | entry=2160 | stop=2148 | tp=2188 | setup=breakout_retest
+prediction_score_version: v5.5_prediction_quality_v2
+prediction_reference_timestamp: 2026-03-13 20:52:40
+snapshot_date: 2026-03-13
+prediction_top_n: 8
+
+## integrity
+- prediction_rows: 8
+- prediction_uses_verifier_fields: False
+- prediction_uses_historical_outcome_fields: False
+- prediction_forbidden_fields_nonnull_count: 0
+- primary_shortlist_rows_in_prediction_snapshot: 0
+- shadow_watchlist_rows_in_prediction_snapshot: 0
+
+## ranking
+1. EURJPY | side=SHORT | grade10=4.2 | grade100=42.0 | band=C | entry=182.351 | sl=182.494 | tp1=182.176 | tp2=182.04
+2. USDCAD | side=LONG | grade10=3.88 | grade100=38.8 | band=D | entry=1.3732 | sl=1.372 | tp1=1.3746 | tp2=1.3757
+3. EURUSD | side=SHORT | grade10=3.73 | grade100=37.3 | band=D | entry=1.1414 | sl=1.1425 | tp1=1.1401 | tp2=1.1391
+4. AUDUSD | side=SHORT | grade10=3.73 | grade100=37.3 | band=D | entry=0.6983 | sl=0.7013 | tp1=0.6946 | tp2=0.6918
+5. GBPUSD | side=SHORT | grade10=3.64 | grade100=36.4 | band=D | entry=1.3224 | sl=1.3239 | tp1=1.3207 | tp2=1.3194
+6. USDJPY | side=LONG | grade10=2.6 | grade100=26.0 | band=D | entry=159.729 | sl=159.489 | tp1=160.02 | tp2=160.247
+7. AUDNZD | side=LONG | grade10=1.95 | grade100=19.5 | band=E | entry=1.2084 | sl=1.2074 | tp1=1.2095 | tp2=1.2104
+8. USDCHF | side=LONG | grade10=1.95 | grade100=19.5 | band=E | entry=0.7913 | sl=0.7907 | tp1=0.7921 | tp2=0.7927
