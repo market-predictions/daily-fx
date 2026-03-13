@@ -1,0 +1,35 @@
+{
+  "generated_at_utc": "2026-03-13T19:49:08.586631+00:00",
+  "predictions": [
+    {
+      "symbol": "EURUSD",
+      "side": "long",
+      "confidence": "high",
+      "score": 0.86,
+      "entry": 1.1,
+      "stop": 1.095,
+      "tp": 1.11,
+      "setup": "continuation"
+    },
+    {
+      "symbol": "BTCUSD",
+      "side": "short",
+      "confidence": "medium",
+      "score": 0.78,
+      "entry": 82000,
+      "stop": 83500,
+      "tp": 79000,
+      "setup": "reversal_after_sweep"
+    },
+    {
+      "symbol": "XAUUSD",
+      "side": "long",
+      "confidence": "medium",
+      "score": 0.74,
+      "entry": 2160,
+      "stop": 2148,
+      "tp": 2188,
+      "setup": "breakout_retest"
+    }
+  ]
+}

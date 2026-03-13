@@ -1,0 +1,4 @@
+symbol,side,confidence,score,entry,stop,tp,setup
+EURUSD,long,high,0.86,1.1,1.095,1.11,continuation
+BTCUSD,short,medium,0.78,82000,83500,79000,reversal_after_sweep
+XAUUSD,long,medium,0.74,2160,2148,2188,breakout_retest
