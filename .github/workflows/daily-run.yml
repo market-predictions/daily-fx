@@ -31,7 +31,7 @@ jobs:
         env:
           TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
         run: |
-          python "fxbias-backtest-calibration-8pairs-20days-mastertable-v5.5.py"
+          python "prediction.py"
 
       - name: Find newest zip
         id: find_zip
