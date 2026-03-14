@@ -1,18 +1,10 @@
 name: Generate predictions
 
-# on:
-#   workflow_dispatch:
-#   schedule:
-#     - cron: "5 16 * * *"
-
-# 5 6 * *  = 07:05 UTC+1
-# 5 12 * * = 13:05 UTC+1
-
 on:
   workflow_dispatch:
   schedule:
     - cron: "5 6 * * *"
-    - cron: "20 12 * * *"
+    - cron: "30 12 * * *"
 
 jobs:
   generate:
