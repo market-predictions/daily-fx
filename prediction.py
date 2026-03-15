@@ -176,7 +176,7 @@ def resolve_backtest_symbols(symbol_switch: str):
     raise ValueError(f"Unknown BACKTEST_SYMBOLS_SWITCH: {symbol_switch}. Use 'set1', 'set2', or 'both'.")
 
 BACKTEST_SYMBOLS, BACKTEST_SYMBOLS_LABEL = resolve_backtest_symbols(BACKTEST_SYMBOLS_SWITCH)
-BACKTEST_SNAPSHOT_DAYS = 20          # number of snapshot days to generate
+BACKTEST_SNAPSHOT_DAYS = 5          # number of snapshot days to generate
 FORWARD_VERIFY_HOURS = 24           # primary forward evaluation window after each snapshot
 ALT_FORWARD_VERIFY_HOURS = 48       # secondary calibration diagnostic horizon
 THIRD_FORWARD_VERIFY_HOURS = 72     # tertiary calibration diagnostic horizon
