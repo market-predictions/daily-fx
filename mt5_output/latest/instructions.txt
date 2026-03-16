@@ -17,4 +17,4 @@ https://raw.githubusercontent.com/market-predictions/daily-fx/main/mt5_output/la
 
 Read the contents of https://raw.githubusercontent.com/market-predictions/daily-fx/main/mt5_output/latest/masterprompt.md and apply the masterprompt to the other opened files.
 
-LET OP: Spiegel de output strak aan de gevraagde opmaak: exacte headings, icon-gebruik en bold waar de masterprompt dat voorschrijft.
+LET OP: Spiegel de output strak aan de gevraagde opmaak: exacte headings, icon-gebruik en bold waar de masterprompt dat voorschrijft. Het is belangrijk om  het template exact te reproduceren zoals die in de masterprompt beschreven staat!
