@@ -16,3 +16,5 @@ integrity:
 https://raw.githubusercontent.com/market-predictions/daily-fx/main/mt5_output/latest/prediction_integrity_report.json
 
 Read the contents of https://raw.githubusercontent.com/market-predictions/daily-fx/main/mt5_output/latest/masterprompt.md and apply the masterprompt to the other opened files.
+
+LET OP: Spiegel de output strak aan de gevraagde opmaak: exacte headings, icon-gebruik en bold waar de masterprompt dat voorschrijft.
