@@ -539,7 +539,7 @@ Formatting rules:
 
 For each Top 10 summary setup, use this exact format:
 
-🔴/🟢 PAIR (X.X/10) — <grade>; <policy bias phrase>, <main technical caveat or support> | Tag: <short tag>
+🔴 **OR** 🟢 PAIR (X.X/10) — <grade>; <policy bias phrase>, <main technical caveat or support> | Tag: <short tag>
 ➡️ Entry: <entry> | ❌ Stop: <stop> | ✅ TP1: <tp1> | ✅ TP2: <tp2>
 
 Rules:
