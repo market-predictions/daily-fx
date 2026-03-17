@@ -184,6 +184,7 @@ It must explicitly answer these 6 questions in substance:
 4. Are there any signs of forbidden hindsight leakage?
 5. Are the prediction timestamps / snapshot dates sane?
 6. Is the export clean enough to treat as a usable prediction board?
+7. What was the date/time of the files you analysed?
 
 You must check for fields like:
 - `Prediction_Uses_Only_Contemporaneous_Inputs`
