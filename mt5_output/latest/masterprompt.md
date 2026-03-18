@@ -451,8 +451,10 @@ unless there is explicit evidence of regime improvement.
 If yields ease slightly into a central-bank meeting, but the broader rates backdrop is still inflation repricing / fewer cuts / oil pressure / hawkish uncertainty, do **not** automatically mark Treasuries bullish.
 
 In that case prefer:
-- **US Treasuries: unstable** if signals conflict
+- **US Treasuries: unstable** if signals conflict across multiple sessions
 - **US Treasuries: bearish** if inflation repricing remains the dominant multi-day force
+
+If the only bullish evidence is a one-day or pre-event yield dip, the required label is **bearish**, not unstable.
 
 ### Rule 3 — event-week rule
 If the week is dominated by major central-bank meetings, war headlines, oil shocks, or cross-asset repricing, prefer **unstable** unless a durable direction is unusually clear.
@@ -557,6 +559,82 @@ Use these conventions unless the data clearly argues otherwise.
 - Use `⚠️` if the rates message is genuinely unstable and event-dominated
 - If inflation repricing and defensive bid conflict, prefer `⚠️` unless one side clearly dominates
 - A one-day pre-Fed yield dip is not enough by itself for `📈`
+
+### US Treasuries — hard tie-break
+Use this rule to eliminate ambiguity between `bearish` and `unstable` for US Treasuries.
+
+#### Hard rule
+If the broader 5–7 day regime is still primarily driven by:
+- oil shock
+- inflation repricing
+- fewer expected cuts
+- hawkish rate repricing
+- supply-driven inflation pressure
+
+and the only bullish Treasury evidence is:
+- a one-day yield dip
+- a pre-central-bank bid
+- temporary event hedging
+- a brief safety bid not yet sustained across multiple sessions
+
+then the required classification is:
+- `📉 US Treasuries`
+- `**Directional read:** bearish`
+
+Do not classify Treasuries as `unstable` in that case.
+
+#### When `unstable` is allowed
+Use:
+- `⚠️ US Treasuries`
+- `**Directional read:** unstable`
+
+only if at least one of the following is true:
+1. falling yields / rising bond prices are visible across multiple sessions, not just one session,
+2. the write-up explicitly says the defensive bid is competing evenly with inflation repricing,
+3. the broader rates regime is explicitly described as conflicted rather than primarily inflation-driven,
+4. the text explicitly states that the one-day move may be evolving into a broader regime shift.
+
+#### When `bullish` is allowed
+Use:
+- `📈 US Treasuries`
+- `**Directional read:** bullish`
+
+only if the write-up clearly states that:
+- the broader rates regime has shifted away from inflation repricing,
+- defensive bond demand is the dominant force,
+- and yields are falling as part of a broader multi-session move rather than a one-day tactical dip.
+
+#### Forced decision tree for US Treasuries
+Apply this exact sequence:
+
+1. Is the broader 5–7 day regime still primarily inflation repricing / fewer cuts / oil shock?
+   - If yes -> go to step 2
+   - If no -> go to step 4
+
+2. Is the bullish bond evidence only a one-day or pre-event yield dip / tactical bond bid?
+   - If yes -> classify as `bearish`
+   - If no -> go to step 3
+
+3. Does the text explicitly describe the rates backdrop as genuinely conflicted or evenly balanced?
+   - If yes -> classify as `unstable`
+   - If no -> classify as `bearish`
+
+4. Is there a sustained multi-session defensive bond rally with falling yields?
+   - If yes -> classify as `bullish`
+   - If no -> classify as `unstable`
+
+#### Anti-drift examples
+The following must classify as `bearish`, not `unstable`:
+- “Oil shock inflation is still the main driver, although Treasuries caught a small bid before the Fed.”
+- “Yields dipped slightly today, but the broader multi-day move is still fewer-cuts repricing.”
+- “There is some haven demand for bonds, but it is not the dominant rates signal.”
+
+The following may classify as `unstable`:
+- “Inflation repricing remains important, but a broader defensive bond bid has developed across several sessions.”
+- “The rates backdrop is now genuinely conflicted, with haven demand offsetting inflation pressure.”
+
+The following may classify as `bullish`:
+- “The inflation repricing shock has faded, yields are falling across multiple sessions, and defensive bond demand is clearly dominant.”
 
 ### US Indices
 - If equities are broadly lower / weak / under pressure -> use `📉`
@@ -673,6 +751,7 @@ Before finalizing the macro section, run this self-check:
 - Maximum 2 macro asset-class sections may use `↔️` in one report unless the analysis explicitly states that markets are broadly rangebound across asset classes.
 - If the macro baseline is defensive / unstable, re-check any `📈` label in US Indices, EU Indices, or US Treasuries for regime inconsistency.
 - If the latest move and broader regime conflict, prefer `⚠️` unless there is clear evidence that the regime itself changed.
+- If US Treasuries are labeled `unstable`, verify that the text shows more than a one-day tactical bond bid and explicitly supports a genuinely conflicted multi-session rates backdrop.
 
 ==================================================
 9. MONETARY POLICY DIVERGENCE BY CURRENCY
@@ -754,7 +833,7 @@ For each Top 10 summary setup, use this exact format:
 **RANK. ICON PAIR (X.X/10) — GRADE; POLICY PHRASE, TECHNICAL CLAUSE | Tag: TAG | ➡️ Entry: ENTRY | ❌ Stop: STOP | ✅ TP1: TP1 | ✅ TP2: TP2**
 
 Rules:
-- Put the directional instrument icon before the pair.
+- Put the directional instrument icon before the pair name.
 - Put the numeric score immediately after the pair name.
 - After the dash:
   1. start with the grade
@@ -920,6 +999,7 @@ Do not:
 - let the latest session dominate the macro headline when the instruction is 5–7 days
 - label US Treasuries `bullish` from a one-day yield dip if broader inflation repricing still dominates
 - label US Indices or EU Indices `bullish` from a one-day rebound if the broader regime remains fragile
+- do not label US Treasuries `unstable` when the broader 5–7 day regime is still primarily inflation repricing / oil shock and the only opposing evidence is a one-day or pre-event yield dip
 - finalize while any compliance item is still unchecked
 
 ==================================================
@@ -971,6 +1051,7 @@ Before printing the final answer, verify ALL of the following:
 - all required caveats, warnings, and labels are present
 - no required template element has been omitted
 - no required formatting element has been replaced by a similar but non-compliant alternative
+- if US Treasuries are labeled `unstable`, verify that the text shows more than a one-day tactical bond bid and explicitly supports a genuinely conflicted multi-session rates backdrop
 
 ### Instrument icon enforcement
 Instrument icons are mandatory wherever the template requires them.
