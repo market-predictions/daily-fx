@@ -915,6 +915,17 @@ The repository path is:
 - repository: `market-predictions/daily-fx`
 - folder: `output/`
 
+## A1. Standard execution instruction
+Use this as the standing default instruction on every run:
+
+**Lees het bestand, volg de instructies, en schrijf de output ook direct weg naar GitHub als nieuw .md-bestand.**
+
+Always attempt the GitHub write automatically when the repository path and folder are already specified in this prompt.
+
+Do not ask for an additional destination or path confirmation unless the repository or folder is missing, contradictory, or explicitly overridden by the user.
+
+If the platform or tool layer requires a user permission click before the write can complete, still proceed up to that point automatically and then continue according to the failure-handling rule below if the write is not approved or cannot complete.
+
 ## B. File naming rule
 Create a **new file** for each run using this exact structure:
 
