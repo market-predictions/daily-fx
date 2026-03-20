@@ -547,6 +547,18 @@ Only include a new opportunity if:
 
 ### [Rank #] [Ticker] — [ETF name]
 
+Immediately below each opportunity header, insert a live stock/ETF chart widget for that ticker when the finance tool supports it.
+
+**Chart widget rule**
+- Fetch current finance data for each ticker included in **Best new opportunities**.
+- Insert the chart widget directly below the opportunity header using the platform finance widget syntax:
+  `finance[finance source reference]`
+- Use exactly one chart widget per opportunity.
+- Prefer the primary listed ETF ticker actually being discussed.
+- Do not insert multiple charts for the same opportunity.
+- If the finance tool does not support the ticker or no valid finance source reference is returned, skip the widget and continue the analysis without breaking structure.
+- The text analysis must remain complete and understandable even if the widget is unavailable.
+
 **Prospective score**
 - Macro Fit:
 - Geopolitical Fit:
@@ -780,6 +792,8 @@ For each position:
 Use the exact prospective score format.
 
 For each opportunity, include:
+- the opportunity header in this form: `### [Rank #] [Ticker] — [ETF name]`
+- immediately below the header, the chart widget when available
 - **Prospective score**
 - **Theme**
 - **Why it fits now**
@@ -841,6 +855,13 @@ Do not use:
 - duplicate arguments in different wording
 - arguments that do not affect the 3–12 month horizon
 
+## Chart widget evidence rule
+For every ticker shown in **Best new opportunities**:
+- attempt to obtain a valid finance source reference first
+- use the chart widget only for the exact ticker being analyzed
+- ensure the narrative text still states the directional thesis, invalidators, and replacement logic even if the chart is shown
+- do not let the widget replace written analysis
+
 ---
 
 # 10. IF DATA IS INCOMPLETE
@@ -868,6 +889,7 @@ Before producing the final answer, silently verify:
 6. Did I explicitly explain any overrides?
 7. Would the same inputs likely produce the same ranking and actions again today?
 8. Did I keep icon use clean and consistent?
+9. Did I insert a chart widget for each Best new opportunity when finance data was available?
 
 If not, revise internally before answering.
 
@@ -914,17 +936,6 @@ Also write the **same analysis** as a **Markdown file** to the GitHub repository
 The repository path is:
 - repository: `market-predictions/daily-fx`
 - folder: `output/`
-
-## A1. Standard execution instruction
-Use this as the standing default instruction on every run:
-
-**Lees het bestand, volg de instructies, en schrijf de output ook direct weg naar GitHub als nieuw .md-bestand.**
-
-Always attempt the GitHub write automatically when the repository path and folder are already specified in this prompt.
-
-Do not ask for an additional destination or path confirmation unless the repository or folder is missing, contradictory, or explicitly overridden by the user.
-
-If the platform or tool layer requires a user permission click before the write can complete, still proceed up to that point automatically and then continue according to the failure-handling rule below if the write is not approved or cannot complete.
 
 ## B. File naming rule
 Create a **new file** for each run using this exact structure:
@@ -990,7 +1001,6 @@ Before producing the final answer, silently verify:
 8. Did I keep icon use clean and consistent?
 9. Did I present the analysis in chat?
 10. Did I also write the analysis to `output/weekly_analysis_260320.md`, or explicitly report failure if not?
-
 
 ---
 
@@ -1085,3 +1095,4 @@ Before producing the final answer, silently verify:
 10. Did I state whether a prior file was found and which one was used?
 11. Did I present the analysis in chat?
 12. Did I also write the analysis to today’s dated file, or explicitly report failure if not?
+13. Did I insert a chart widget for each Best new opportunity when a valid finance reference was available?
