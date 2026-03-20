@@ -547,17 +547,23 @@ Only include a new opportunity if:
 
 ### [Rank #] [Ticker] — [ETF name]
 
-Immediately below each opportunity header, insert a live stock/ETF chart widget for that ticker when the finance tool supports it.
+Immediately below each opportunity header, insert a direct link to the corresponding **full TradingView chart** for that ticker.
 
-**Chart widget rule**
-- Fetch current finance data for each ticker included in **Best new opportunities**.
-- Insert the chart widget directly below the opportunity header using the platform finance widget syntax:
-  `finance[finance source reference]`
-- Use exactly one chart widget per opportunity.
-- Prefer the primary listed ETF ticker actually being discussed.
-- Do not insert multiple charts for the same opportunity.
-- If the finance tool does not support the ticker or no valid finance source reference is returned, skip the widget and continue the analysis without breaking structure.
-- The text analysis must remain complete and understandable even if the widget is unavailable.
+**TradingView link rule**
+- Do **not** use embedded chart widgets.
+- Insert a plain clickable markdown link directly below the opportunity header.
+- Use this exact structure:
+  `[Open full TradingView chart](https://www.tradingview.com/chart/?symbol=AMEX%3AXLE)`
+- Use the correct exchange prefix when reasonably known.
+- For U.S.-listed ETFs in this prompt, default to:
+  - XLE → `AMEX:XLE`
+  - GLD → `AMEX:GLD`
+  - ITA → `AMEX:ITA`
+  - QUAL → `NASDAQ:QUAL`
+- URL-encode the symbol separator `:` as `%3A`.
+- If the exchange is uncertain, use the best reasonable TradingView symbol and continue the analysis without asking follow-up questions.
+- Use exactly one TradingView link per opportunity.
+- The text analysis must remain complete and understandable even without opening the link.
 
 **Prospective score**
 - Macro Fit:
@@ -793,7 +799,7 @@ Use the exact prospective score format.
 
 For each opportunity, include:
 - the opportunity header in this form: `### [Rank #] [Ticker] — [ETF name]`
-- immediately below the header, the chart widget when available
+- immediately below the header, one clickable **full TradingView chart** link
 - **Prospective score**
 - **Theme**
 - **Why it fits now**
@@ -855,12 +861,12 @@ Do not use:
 - duplicate arguments in different wording
 - arguments that do not affect the 3–12 month horizon
 
-## Chart widget evidence rule
+## TradingView link rule reminder
 For every ticker shown in **Best new opportunities**:
-- attempt to obtain a valid finance source reference first
-- use the chart widget only for the exact ticker being analyzed
-- ensure the narrative text still states the directional thesis, invalidators, and replacement logic even if the chart is shown
-- do not let the widget replace written analysis
+- include one clickable full-chart TradingView link
+- use the link for the exact ticker being analyzed
+- keep the written thesis, invalidators, and replacement logic fully stated in text
+- do not let the link replace written analysis
 
 ---
 
@@ -889,7 +895,7 @@ Before producing the final answer, silently verify:
 6. Did I explicitly explain any overrides?
 7. Would the same inputs likely produce the same ranking and actions again today?
 8. Did I keep icon use clean and consistent?
-9. Did I insert a chart widget for each Best new opportunity when finance data was available?
+9. Did I insert a TradingView full-chart link for each Best new opportunity?
 
 If not, revise internally before answering.
 
@@ -918,7 +924,6 @@ Minimize free interpretation.
 If a score-based action is overridden, explain why explicitly.
 For new opportunities, only include ideas that genuinely improve the portfolio or fill an important gap.
 Use the icon and readability regime consistently.
-
 
 ---
 
@@ -1095,4 +1100,4 @@ Before producing the final answer, silently verify:
 10. Did I state whether a prior file was found and which one was used?
 11. Did I present the analysis in chat?
 12. Did I also write the analysis to today’s dated file, or explicitly report failure if not?
-13. Did I insert a chart widget for each Best new opportunity when a valid finance reference was available?
+13. Did I insert a TradingView full-chart link for each Best new opportunity?
