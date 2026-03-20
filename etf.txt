@@ -44,7 +44,7 @@ If materially different conclusions would result from the same inputs, tighten t
 
 # 1. READABILITY + ICON REGIME
 
-Use a clean, consistent icon regime to improve scanability. Use icons to improve readability, **not** to add clutter. Base styling on the uploaded formatting example’s icon regime only, not its logic. fileciteturn0file0
+Use a clean, consistent icon regime to improve scanability. Use icons to improve readability, **not** to add clutter. Base styling on the uploaded formatting example’s icon regime only, not its logic.
 
 ## Preferred icons
 - ✅ supportive / aligned / passed / keep
@@ -896,3 +896,181 @@ Minimize free interpretation.
 If a score-based action is overridden, explain why explicitly.
 For new opportunities, only include ideas that genuinely improve the portfolio or fill an important gap.
 Use the icon and readability regime consistently.
+
+
+---
+
+# 13. DUAL OUTPUT + GITHUB WRITE REQUIREMENT
+
+This instruction is mandatory on every run.
+
+## A. Dual output rule
+Present the full analysis **here in the chat** using the required output structure.
+
+Also write the **same analysis** as a **Markdown file** to the GitHub repository output folder corresponding to:
+
+`https://raw.githubusercontent.com/market-predictions/daily-fx/main/output/`
+
+The repository path is:
+- repository: `market-predictions/daily-fx`
+- folder: `output/`
+
+## B. File naming rule
+Create a **new file** for each run using this exact structure:
+
+`weekly_analysis_YYMMDD.md`
+
+Where:
+- `YY` = current 2-digit year
+- `MM` = current 2-digit month
+- `DD` = current 2-digit day
+
+For the current date, the required filename is:
+
+`weekly_analysis_260320.md`
+
+## C. Content parity rule
+The Markdown file written to GitHub must contain the **same substantive analysis** as the chat output:
+- same regime calls
+- same scores
+- same action labels
+- same opportunities
+- same risks / invalidators
+- same bottom line
+
+Minor formatting differences are allowed if needed for Markdown rendering.  
+Material differences are not allowed.
+
+## D. Write path rule
+Write the file to:
+
+`output/weekly_analysis_260320.md`
+
+## E. Failure-handling rule
+If the GitHub write fails:
+1. still present the full analysis in chat
+2. explicitly state that the GitHub write failed
+3. state the intended repository path and filename
+4. provide the analysis as a downloadable `.md` file in chat when possible
+
+## F. No ambiguity rule
+Do not ask where to write the file when this repository and path are available.  
+Use the exact repository and output folder above unless I explicitly override them.
+
+## G. Consistency rule
+The GitHub-written `.md` file must preserve:
+- the icon regime where Markdown supports it
+- tables where required
+- bold emphasis
+- underline only where supported; if underline is not practical in Markdown rendering, replace it with bold and keep the meaning unchanged
+
+---
+
+# 14. UPDATED FINAL CONSISTENCY CHECK BEFORE ANSWERING
+
+Before producing the final answer, silently verify:
+1. Did I use the fixed regime labels?
+2. Did I use the fixed scoring system?
+3. Did I apply the fixed action thresholds?
+4. Did I include the second-order effects map?
+5. Did I avoid vague unsupported judgments?
+6. Did I explicitly explain any overrides?
+7. Would the same inputs likely produce the same ranking and actions again today?
+8. Did I keep icon use clean and consistent?
+9. Did I present the analysis in chat?
+10. Did I also write the analysis to `output/weekly_analysis_260320.md`, or explicitly report failure if not?
+
+
+---
+
+# 15. PRIOR WEEK FILE LOOKUP RULE
+
+This instruction is mandatory on every run.
+
+## A. Search location
+Before starting the current analysis, look in the same GitHub output directory:
+
+`output/`
+
+within the repository:
+
+`market-predictions/daily-fx`
+
+for the most recent previously stored file matching this naming pattern:
+
+`weekly_analysis_YYMMDD.md`
+
+## B. Selection rule
+Use the **most recent available prior file strictly earlier than today’s file** as the reference file for the current portfolio analysis.
+
+For example:
+- if today’s file is `weekly_analysis_260320.md`
+- then first look for the latest earlier file such as:
+  - `weekly_analysis_260319.md`
+  - else `weekly_analysis_260318.md`
+  - and so on
+
+Do **not** use today’s own file as the prior reference.
+
+## C. Purpose of the prior file
+Use the selected prior weekly analysis file to extract and reuse, where available:
+- prior portfolio positions
+- prior weights
+- prior action labels
+- prior conviction tiers
+- prior watchlist ideas
+- prior replacement logic
+- prior stated risks / invalidators
+- prior bottom line
+- prior assumptions that are still relevant
+
+This prior file is the default starting point for the new weekly analysis unless I explicitly provide a new portfolio that overrides it.
+
+## D. Priority rule
+Use inputs in this order of priority:
+1. explicit portfolio data I provide in the current chat
+2. the most recent prior `weekly_analysis_YYMMDD.md` file in `output/`
+3. clearly stated persistent constraints from the prompt or current conversation
+
+If current-chat inputs conflict with the prior stored file, **current-chat inputs always win**.
+
+## E. Missing-file handling
+If no prior weekly analysis file is found in `output/`:
+1. state that no prior stored weekly analysis was found
+2. proceed using the current prompt rules and any portfolio data available in chat
+3. if no portfolio is provided, build a fresh inaugural portfolio as instructed by the masterprompt
+
+## F. Consistency rule
+When using a prior file:
+- briefly state which prior file was used
+- clearly separate:
+  - inherited positions / assumptions
+  - this week’s changes
+- do not silently invent changes to prior positions
+
+## G. Output requirement
+In the final analysis, include a brief note in the Executive Summary or opening section:
+- whether a prior stored file was found
+- which filename was used
+- whether the current portfolio came from:
+  - current user input
+  - prior stored weekly analysis
+  - or a fresh inaugural build
+
+---
+
+# 16. UPDATED FINAL CONSISTENCY CHECK BEFORE ANSWERING
+
+Before producing the final answer, silently verify:
+1. Did I use the fixed regime labels?
+2. Did I use the fixed scoring system?
+3. Did I apply the fixed action thresholds?
+4. Did I include the second-order effects map?
+5. Did I avoid vague unsupported judgments?
+6. Did I explicitly explain any overrides?
+7. Would the same inputs likely produce the same ranking and actions again today?
+8. Did I keep icon use clean and consistent?
+9. Did I check `output/` for the most recent earlier `weekly_analysis_YYMMDD.md` file?
+10. Did I state whether a prior file was found and which one was used?
+11. Did I present the analysis in chat?
+12. Did I also write the analysis to today’s dated file, or explicitly report failure if not?
