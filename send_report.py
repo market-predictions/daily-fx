@@ -16,7 +16,7 @@ body = latest_report.read_text(encoding="utf-8")
 subject = f"Weekly ETF Portfolio Review - {latest_report.stem.replace('weekly_analysis_', '')}"
 
 smtp_host = os.environ["MRKT_RPRTS_SMTP_HOST"]
-smtp_port = int(os.environ.get("SMTP_PORT") or "587")
+smtp_port = int(os.environ.get("MRKT_RPRTS_SMTP_PORT") or "587")
 smtp_user = os.environ["MRKT_RPRTS_SMTP_USER"]
 smtp_pass = os.environ["MRKT_RPRTS_SMTP_PASS"]
 mail_from = os.environ["MRKT_RPRTS_MAIL_FROM"]
