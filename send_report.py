@@ -39,19 +39,20 @@ CONTRA_HEADER_FILL = "FCE4D6"
 # ---------- CLEANUP ----------
 def strip_citations(text: str) -> str:
     """
-    Remove citation markers from export versions (.md, .docx, email body).
-    Keep original report untouched.
+    Remove ChatGPT/web/file citation markers from export versions.
     """
-    text = re.sub(r"", "", text)
-    text = re.sub(r"", "", text)
-    text = re.sub(r"", "", text)
+    patterns = [
+        r"",
+        r"",
+        r"",
+    ]
+    for pattern in patterns:
+        text = re.sub(pattern, "", text, flags=re.DOTALL)
 
-    # Remove markdown-style inline source-only links if desired
-    text = re.sub(r"\[\([^)]+\)\]", "", text)
-
-    # Clean spacing
+    # remove doubled spaces before punctuation/newlines
     text = re.sub(r"[ \t]+\n", "\n", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r" {2,}", " ", text)
     return text.strip()
 
 
@@ -98,10 +99,12 @@ def add_colored_heading(doc: Document, text: str, level: int) -> None:
     paragraph_run(p, text, bold=True, color=COLOR_HEADING, size=size_map.get(level, 11.5))
 
 
+def add_subheader(doc: Document, text: str, color: RGBColor = COLOR_LABEL) -> None:
+    p = doc.add_paragraph()
+    paragraph_run(p, text, bold=True, color=color, size=11.5)
+
+
 def add_hyperlink(paragraph, text: str, url: str, color="0563C1", underline=True):
-    """
-    Add a clickable hyperlink to a Word paragraph.
-    """
     part = paragraph.part
     r_id = part.relate_to(url, RT.HYPERLINK, is_external=True)
 
@@ -241,9 +244,6 @@ def add_normal_paragraph(doc: Document, text: str) -> None:
 
 # ---------- TABLE STYLING ----------
 def is_pro_contra_table(rows: list[list[str]]) -> bool:
-    """
-    Detect 2-column table used for pro / contra format.
-    """
     if len(rows) < 2:
         return False
     if len(rows[0]) != 2:
@@ -293,6 +293,31 @@ def add_styled_table(doc: Document, rows: list[list[str]]) -> None:
     doc.add_paragraph("")
 
 
+# ---------- SPECIAL PLAIN SUBHEADERS ----------
+PLAIN_SUBHEADERS = {
+    "Assessment",
+    "Prospective score",
+    "Theme",
+    "Why it fits now",
+    "Technical analysis",
+    "Second-order opportunity / threat map",
+    "Replacement logic",
+    "Why now rather than later",
+    "Scorecard",
+    "Exposure heatmap",
+    "Macro invalidators",
+    "Market-based invalidators",
+    "Geopolitical invalidators",
+    "Second-order invalidators",
+    "Portfolio construction risks",
+}
+
+
+def is_plain_subheader(text: str) -> bool:
+    cleaned = clean_md_inline(text)
+    return cleaned in PLAIN_SUBHEADERS
+
+
 # ---------- DOCX BUILDER ----------
 def build_docx_from_markdown(md_text: str, output_path: Path, send_date_str: str) -> None:
     doc = Document()
@@ -334,6 +359,12 @@ def build_docx_from_markdown(md_text: str, output_path: Path, send_date_str: str
                 if "tradingview.com/chart/" in url:
                     p = doc.add_paragraph()
                     add_hyperlink(p, link_text, url)
+            i += 1
+            continue
+
+        # Plain subheaders
+        if is_plain_subheader(stripped):
+            add_subheader(doc, clean_md_inline(stripped))
             i += 1
             continue
 
@@ -565,7 +596,7 @@ def main() -> None:
 
     send_date_str = datetime.now().strftime("%Y-%m-%d")
 
-    # Clean md export (presentation/export version)
+    # Clean md export
     clean_md_path = latest_report.with_name(f"weekly_report_review_{send_date_str}.md")
     clean_md_path.write_text(md_text_clean, encoding="utf-8")
 
