@@ -39,13 +39,20 @@ CONTRA_HEADER_FILL = "FCE4D6"
 # ---------- CLEANUP ----------
 def strip_citations(text: str) -> str:
     """
-    Remove web/file citation artifacts and similar non-user-friendly markers.
+    Remove citation markers from export versions (.md, .docx, email body).
+    Keep original report untouched.
     """
     text = re.sub(r"", "", text)
     text = re.sub(r"", "", text)
     text = re.sub(r"", "", text)
+
+    # Remove markdown-style inline source-only links if desired
     text = re.sub(r"\[\([^)]+\)\]", "", text)
-    return text
+
+    # Clean spacing
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def clean_md_inline(text: str) -> str:
@@ -55,13 +62,6 @@ def clean_md_inline(text: str) -> str:
     text = text.replace("<u>", "").replace("</u>", "")
     text = re.sub(r"\s+", " ", text)
     return text.strip()
-
-
-def extract_tradingview_url(text: str) -> str | None:
-    m = re.search(r"\(https://www\.tradingview\.com/chart/\?symbol=[^)]+\)", text)
-    if m:
-        return m.group(0).strip("()")
-    return None
 
 
 def is_markdown_link_line(text: str) -> bool:
@@ -162,14 +162,17 @@ def parse_markdown_table(lines: list[str]) -> list[list[str]]:
     return rows
 
 
+# ---------- FUNCTIONAL COLORS ----------
 def color_for_term(text: str):
     t = text.lower().strip()
+
     if "overweight" in t:
         return COLOR_OVERWEIGHT
     if "underweight" in t:
         return COLOR_UNDERWEIGHT
     if t == "neutral" or " neutral" in t:
         return COLOR_NEUTRAL
+
     if t == "add" or t.startswith("add "):
         return COLOR_ADD
     if t == "hold" or t.startswith("hold "):
@@ -178,6 +181,7 @@ def color_for_term(text: str):
         return COLOR_REDUCE
     if t == "close" or t.startswith("close "):
         return COLOR_CLOSE
+
     return COLOR_TEXT
 
 
@@ -235,11 +239,16 @@ def add_normal_paragraph(doc: Document, text: str) -> None:
     paragraph_run(p, cleaned, color=color_for_term(cleaned))
 
 
+# ---------- TABLE STYLING ----------
 def is_pro_contra_table(rows: list[list[str]]) -> bool:
+    """
+    Detect 2-column table used for pro / contra format.
+    """
     if len(rows) < 2:
         return False
     if len(rows[0]) != 2:
         return False
+
     headers = [c.lower().strip() for c in rows[0]]
     pro_like = any("pro" in h or "argument" in h for h in headers)
     contra_like = any("contra" in h or "invalidation" in h for h in headers)
@@ -298,7 +307,7 @@ def build_docx_from_markdown(md_text: str, output_path: Path, send_date_str: str
         line = lines[i].rstrip()
         stripped = line.strip()
 
-        # Skip Executive Summary section entirely
+        # Skip Executive Summary entirely
         if re.match(r"^##\s+1\.", stripped):
             skip_exec_summary = True
             i += 1
@@ -316,14 +325,15 @@ def build_docx_from_markdown(md_text: str, output_path: Path, send_date_str: str
             i += 1
             continue
 
-        # TradingView links: preserve as clickable docx links
+        # Preserve clickable TradingView links only
         if is_markdown_link_line(stripped):
             m = re.match(r"^\[(.*?)\]\((https?://.*?)\)$", stripped)
             if m:
                 link_text = clean_md_inline(m.group(1))
                 url = m.group(2)
-                p = doc.add_paragraph()
-                add_hyperlink(p, link_text, url)
+                if "tradingview.com/chart/" in url:
+                    p = doc.add_paragraph()
+                    add_hyperlink(p, link_text, url)
             i += 1
             continue
 
@@ -422,6 +432,20 @@ def build_email_body_html(md_text: str, send_date_str: str) -> str:
             .replace(">", "&gt;")
         )
 
+    def action_color(header: str) -> str:
+        h = header.lower()
+        if "close" in h:
+            return "#C00000"
+        if "reduce" in h:
+            return "#C08000"
+        if "hold" in h:
+            return "#008000"
+        if "add" in h:
+            return "#008000"
+        if "replace" in h:
+            return "#1F4E79"
+        return "#1F4E79"
+
     rotation_html = ""
     if section8:
         blocks = []
@@ -435,11 +459,11 @@ def build_email_body_html(md_text: str, send_date_str: str) -> str:
 
             if s.startswith("### "):
                 if current_header:
-                    items_html = "".join(f"<li>{esc(item)}</li>" for item in current_items)
+                    items_html = "".join(f"<li style='margin:0 0 4px 0;'>{esc(item)}</li>" for item in current_items)
                     blocks.append(f"""
-                    <div style="margin:0 0 14px 0;">
-                      <div style="font-weight:700; margin-bottom:4px;">{esc(current_header)}</div>
-                      <ul style="margin:4px 0 0 18px; padding:0;">{items_html}</ul>
+                    <div style="margin:0 0 16px 0;">
+                      <div style="font-weight:700; color:{action_color(current_header)}; margin-bottom:6px; font-size:15px;">{esc(current_header)}</div>
+                      <ul style="margin:4px 0 0 18px; padding:0; line-height:1.55;">{items_html}</ul>
                     </div>
                     """)
                 current_header = clean_md_inline(s[4:])
@@ -450,11 +474,11 @@ def build_email_body_html(md_text: str, send_date_str: str) -> str:
                 current_items.append(s)
 
         if current_header:
-            items_html = "".join(f"<li>{esc(item)}</li>" for item in current_items)
+            items_html = "".join(f"<li style='margin:0 0 4px 0;'>{esc(item)}</li>" for item in current_items)
             blocks.append(f"""
-            <div style="margin:0 0 14px 0;">
-              <div style="font-weight:700; margin-bottom:4px;">{esc(current_header)}</div>
-              <ul style="margin:4px 0 0 18px; padding:0;">{items_html}</ul>
+            <div style="margin:0 0 16px 0;">
+              <div style="font-weight:700; color:{action_color(current_header)}; margin-bottom:6px; font-size:15px;">{esc(current_header)}</div>
+              <ul style="margin:4px 0 0 18px; padding:0; line-height:1.55;">{items_html}</ul>
             </div>
             """)
 
@@ -462,30 +486,32 @@ def build_email_body_html(md_text: str, send_date_str: str) -> str:
 
     top_ops_html = ""
     if top_ops:
-        items = "".join(f"<li>{esc(item)}</li>" for item in top_ops)
+        items = "".join(
+            f"<li style='margin:0 0 6px 0;'>{esc(item)}</li>" for item in top_ops
+        )
         top_ops_html = f"""
-        <div style="margin-top:22px;">
-          <div style="font-size:16px; font-weight:700; color:#2F5597; margin-bottom:8px;">Top opportunities</div>
+        <div style="margin-top:4px;">
+          <div style="font-size:17px; font-weight:700; color:#2F5597; margin-bottom:10px;">Top opportunities</div>
           <ul style="margin:0 0 0 18px; padding:0; line-height:1.6;">{items}</ul>
         </div>
         """
 
     bottom_html = ""
     if bottom:
-        items = []
+        parts = []
         for line in bottom:
             s = line.strip()
             if not s or re.match(r"^##\s+11\.", s):
                 continue
             if s.startswith("- "):
-                items.append(f"<li>{esc(s[2:])}</li>")
+                parts.append(f"<div style='margin:0 0 8px 0;'><strong>{esc(s[2:])}</strong></div>")
             else:
-                items.append(f"<div style='margin:0 0 8px 0;'>{esc(s)}</div>")
+                parts.append(f"<div style='margin:0 0 8px 0;'>{esc(s)}</div>")
 
         bottom_html = f"""
-        <div style="margin-top:24px;">
-          <div style="font-size:16px; font-weight:700; color:#2F5597; margin-bottom:8px;">Bottom line</div>
-          {''.join(items)}
+        <div style="margin-top:26px;">
+          <div style="font-size:17px; font-weight:700; color:#2F5597; margin-bottom:10px;">Bottom line</div>
+          {''.join(parts)}
         </div>
         """
 
@@ -494,17 +520,17 @@ def build_email_body_html(md_text: str, send_date_str: str) -> str:
       <body style="margin:0; padding:0; background:#f6f8fb; font-family:Calibri, Arial, sans-serif; color:#282828;">
         <div style="max-width:860px; margin:0 auto; padding:28px 20px;">
           <div style="background:#ffffff; border:1px solid #d9e2f0; border-radius:10px; padding:28px 30px;">
-            <div style="font-size:24px; font-weight:700; color:#2F5597; margin-bottom:6px;">
+            <div style="font-size:25px; font-weight:700; color:#2F5597; margin-bottom:6px;">
               Weekly Report Review {send_date_str}
             </div>
-            <div style="font-size:13px; color:#666666; margin-bottom:22px;">
+            <div style="font-size:13px; color:#666666; margin-bottom:24px;">
               Automatically generated weekly ETF report
             </div>
 
             {top_ops_html}
 
-            <div style="margin-top:24px;">
-              <div style="font-size:16px; font-weight:700; color:#2F5597; margin-bottom:10px;">
+            <div style="margin-top:26px;">
+              <div style="font-size:17px; font-weight:700; color:#2F5597; margin-bottom:12px;">
                 Portfolio rotation plan
               </div>
               {rotation_html}
@@ -532,15 +558,23 @@ def main() -> None:
         raise FileNotFoundError("No weekly_analysis_*.md file found in output/")
 
     latest_report = reports[-1]
-    md_text = latest_report.read_text(encoding="utf-8")
+    original_md_text = latest_report.read_text(encoding="utf-8")
+
+    # Clean export version: no citations
+    md_text_clean = strip_citations(original_md_text)
 
     send_date_str = datetime.now().strftime("%Y-%m-%d")
 
+    # Clean md export (presentation/export version)
+    clean_md_path = latest_report.with_name(f"weekly_report_review_{send_date_str}.md")
+    clean_md_path.write_text(md_text_clean, encoding="utf-8")
+
+    # Docx export
     docx_path = latest_report.with_name(f"weekly_report_review_{send_date_str}.docx")
-    build_docx_from_markdown(md_text, docx_path, send_date_str)
+    build_docx_from_markdown(md_text_clean, docx_path, send_date_str)
 
     subject = f"Weekly Report Review {send_date_str}"
-    html_body = build_email_body_html(md_text, send_date_str)
+    html_body = build_email_body_html(md_text_clean, send_date_str)
 
     smtp_host = os.environ["MRKT_RPRTS_SMTP_HOST"]
     smtp_port = int(os.environ.get("MRKT_RPRTS_SMTP_PORT") or "587")
@@ -573,7 +607,10 @@ def main() -> None:
         server.login(smtp_user, smtp_pass)
         server.sendmail(mail_from, [mail_to], msg.as_string())
 
-    print(f"Sent email for {latest_report.name} with attachment {docx_path.name}")
+    print(
+        f"Sent email for {latest_report.name} with attachment {docx_path.name} "
+        f"and clean markdown export {clean_md_path.name}"
+    )
 
 
 if __name__ == "__main__":
