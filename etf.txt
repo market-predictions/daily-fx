@@ -80,6 +80,22 @@ Use a clean, consistent icon regime to improve scanability. Use icons to improve
 - Use tables where required by the framework.
 - Keep output visually consistent across runs.
 
+## Disclaimer display rules
+Use a subtle Markdown-safe callout directly below the report title.
+Do **not** use bright colors, large warning boxes, or oversized text.
+
+Use this exact structure immediately below the title:
+
+> **Note**  
+> *This report is for informational and educational purposes only; please see the disclaimer at the end.*
+
+This callout is meant to visually distinguish the disclaimer from the main report without becoming distracting.
+Prefer:
+- blockquote style
+- one short italic sentence
+- optional bold label such as `Note`
+- no heavy styling that breaks Markdown portability
+
 ## Required output label style
 Use the following pattern where relevant:
 - **Primary regime:** [label]
@@ -740,6 +756,9 @@ Use exactly this structure.
 
 # Weekly Report Review YYYY-MM-DD
 
+> **Note**  
+> *This report is for informational and educational purposes only; please see the disclaimer at the end.*
+
 Use the actual review date in ISO format in the title.  
 Example:  
 `# Weekly Report Review 2026-03-21`
@@ -879,6 +898,10 @@ Conclude with:
 - what is acceptable but replaceable
 - **Single best portfolio upgrade this week:** [text]
 
+## 12. Disclaimer
+
+This report is for informational and educational purposes only; please see the disclaimer at the end.
+
 ---
 
 # 9. EVIDENCE STANDARD FOR NEW OPPORTUNITIES
@@ -919,6 +942,12 @@ For every item in **Best new opportunities**:
 - then exactly 3 argument rows
 - do not replace this with bullets or numbered lists
 
+## Disclaimer reminder
+- always place the disclaimer callout directly below the title
+- always include the final `## Disclaimer` section at the end of the report
+- use the exact sentence provided
+- keep the disclaimer visually distinct but understated
+
 ---
 
 # 10. IF DATA IS INCOMPLETE
@@ -950,6 +979,8 @@ Before producing the final answer, silently verify:
 10. Did I include a technical analysis subsection for each advised ETF?
 11. Did I use the dated title format `Weekly Report Review YYYY-MM-DD`?
 12. Did I use the required pro / contra table format for each new opportunity?
+13. Did I place the disclaimer callout directly below the title?
+14. Did I include the final `## Disclaimer` section with the exact sentence?
 
 If not, revise internally before answering.
 
@@ -1043,6 +1074,8 @@ The GitHub-written `.md` file must preserve:
 - the icon regime where Markdown supports it
 - tables where required
 - bold emphasis
+- the disclaimer callout below the title
+- the final `## Disclaimer` section
 
 ---
 
@@ -1155,3 +1188,5 @@ Before producing the final answer, silently verify:
 12. Did I also write the analysis to today’s dated file, or explicitly report failure if not?
 13. Did I insert a TradingView full-chart link for each Best new opportunity?
 14. Did I include technical analysis for each advised ETF?
+15. Did I place the disclaimer callout directly below the title?
+16. Did I include the final `## Disclaimer` section with the exact sentence?
