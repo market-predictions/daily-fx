@@ -616,15 +616,21 @@ Explain in direct regime language.
 - Opportunity created:
 - Threat created:
 
-**3 arguments pro**
-1. One factual, source-based macro / policy / market argument.
-2. One factual, source-based trend / leadership / relative-strength argument.
-3. One factual, source-based geopolitical / sector / structural argument.
+**3 arguments pro / contra table**
+Use this exact table structure for every opportunity:
 
-**3 contra / invalidation criteria**
-1. A factual macro invalidation.
-2. A market-based invalidation.
-3. A geopolitical / policy / structural invalidation.
+| 3 arguments pro | 3 arguments contra |
+|---|---|
+| argument 1 pro | argument 1 contra |
+| argument 2 pro | argument 2 contra |
+| argument 3 pro | argument 3 contra |
+
+Rules:
+- each row must pair one pro with one contra / invalidation point
+- keep each cell concise but specific
+- the pro side must remain factual and source-based
+- the contra side must remain a genuine invalidation or threat, not a weak caveat
+- do not use separate numbered pro and contra lists when this table is required
 
 **Why now rather than later**  
 Timing explanation.
@@ -732,7 +738,11 @@ You must obey the following safeguards:
 
 Use exactly this structure.
 
-# Weekly Portfolio Review
+# Weekly Report Review YYYY-MM-DD
+
+Use the actual review date in ISO format in the title.  
+Example:  
+`# Weekly Report Review 2026-03-21`
 
 ## 1. ✅ Executive summary
 Provide:
@@ -833,8 +843,7 @@ For each opportunity, include:
 - **Why it fits now**
 - **Technical analysis**
 - **Second-order opportunity / threat map**
-- **3 arguments pro**
-- **3 contra / invalidation criteria**
+- **3 arguments pro / contra table**
 - **Why now rather than later**
 - **Replacement logic**
 - **Implementation note:** **core / satellite / tactical starter / watchlist only**
@@ -903,6 +912,13 @@ For every ETF that is advised as **Add** or included in **Best new opportunities
 - keep it concrete and level-based
 - make clear whether the TA confirms, delays, or slightly conflicts with the macro thesis
 
+## Pro / contra table reminder
+For every item in **Best new opportunities**:
+- use the required 2-column, 4-row markdown table
+- header row: `3 arguments pro` and `3 arguments contra`
+- then exactly 3 argument rows
+- do not replace this with bullets or numbered lists
+
 ---
 
 # 10. IF DATA IS INCOMPLETE
@@ -932,6 +948,8 @@ Before producing the final answer, silently verify:
 8. Did I keep icon use clean and consistent?
 9. Did I insert a TradingView full-chart link for each Best new opportunity?
 10. Did I include a technical analysis subsection for each advised ETF?
+11. Did I use the dated title format `Weekly Report Review YYYY-MM-DD`?
+12. Did I use the required pro / contra table format for each new opportunity?
 
 If not, revise internally before answering.
 
