@@ -21,10 +21,10 @@ jobs:
 
       - name: Send email
         env:
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          MAIL_FROM: ${{ secrets.MAIL_FROM }}
-          MAIL_TO: ${{ secrets.MAIL_TO }}
+          SMTP_HOST: ${{ secrets.MRKT_RPRTS_SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.MRKT_RPRTS_SMTP_PORT }}
+          SMTP_USER: ${{ secrets.MRKT_RPRTS_SMTP_USER }}
+          SMTP_PASS: ${{ secrets.MRKT_RPRTS_SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MRKT_RPRTS_MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MRKT_RPRTS_MAIL_TO }}
         run: python send_report.py
