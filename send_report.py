@@ -9,14 +9,65 @@ from email.mime.application import MIMEApplication
 
 from docx import Document
 from docx.enum.section import WD_ORIENT
-from docx.shared import Inches, Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches, Pt, RGBColor
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 
 
+# ---------- COLOR SCHEME ----------
+COLOR_TEXT = RGBColor(40, 40, 40)
+COLOR_HEADING = RGBColor(47, 85, 151)       # dark blue
+COLOR_ADD = RGBColor(0, 128, 0)             # green
+COLOR_HOLD = RGBColor(0, 128, 0)            # green
+COLOR_REDUCE = RGBColor(192, 128, 0)        # orange
+COLOR_CLOSE = RGBColor(192, 0, 0)           # red
+COLOR_LABEL = RGBColor(31, 78, 121)         # blue accent
+COLOR_MUTED = RGBColor(90, 90, 90)
+
+TABLE_HEADER_FILL = "D9EAF7"                # light blue
+TABLE_ALT_FILL = "F7FBFF"                   # very light blue
+TABLE_BORDER_COLOR = "A6A6A6"
+
+
+# ---------- BASIC HELPERS ----------
 def clean_md_inline(text: str) -> str:
     text = text.replace("**", "")
     text = text.replace("`", "")
     text = text.replace("<u>", "").replace("</u>", "")
     return text.strip()
+
+
+def set_cell_shading(cell, fill: str) -> None:
+    tc_pr = cell._tc.get_or_add_tcPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:fill"), fill)
+    tc_pr.append(shd)
+
+
+def set_cell_text(cell, text: str, bold: bool = False, color: RGBColor | None = None, font_size: float = 10.0):
+    cell.text = ""
+    p = cell.paragraphs[0]
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    run = p.add_run(text)
+    run.bold = bold
+    run.font.name = "Calibri"
+    run.font.size = Pt(font_size)
+    run.font.color.rgb = color or COLOR_TEXT
+
+
+def set_document_layout(doc: Document) -> None:
+    section = doc.sections[0]
+    section.orientation = WD_ORIENT.LANDSCAPE
+    section.page_width, section.page_height = section.page_height, section.page_width
+    section.left_margin = Inches(0.55)
+    section.right_margin = Inches(0.55)
+    section.top_margin = Inches(0.55)
+    section.bottom_margin = Inches(0.55)
+
+    styles = doc.styles
+    styles["Normal"].font.name = "Calibri"
+    styles["Normal"].font.size = Pt(10.5)
 
 
 def is_markdown_table_line(line: str) -> bool:
@@ -28,14 +79,10 @@ def is_markdown_separator_line(line: str) -> bool:
     line = line.strip()
     if not is_markdown_table_line(line):
         return False
-
     cells = [c.strip() for c in line.strip("|").split("|")]
     if not cells:
         return False
-
     for cell in cells:
-        if not cell:
-            return False
         if not re.fullmatch(r":?-{3,}:?", cell):
             return False
     return True
@@ -51,33 +98,106 @@ def parse_markdown_table(lines: list[str]) -> list[list[str]]:
     return rows
 
 
-def set_landscape(doc: Document) -> None:
-    section = doc.sections[0]
-    section.orientation = WD_ORIENT.LANDSCAPE
-    section.page_width, section.page_height = section.page_height, section.page_width
-    section.left_margin = Inches(0.5)
-    section.right_margin = Inches(0.5)
-    section.top_margin = Inches(0.6)
-    section.bottom_margin = Inches(0.6)
+# ---------- WORD STYLING HELPERS ----------
+def add_colored_heading(doc: Document, text: str, level: int) -> None:
+    p = doc.add_heading("", level=level)
+    run = p.add_run(text)
+    run.bold = True
+    run.font.name = "Calibri"
+    run.font.color.rgb = COLOR_HEADING
 
-
-def style_normal_text(doc: Document) -> None:
-    styles = doc.styles
-    if "Normal" in styles:
-        styles["Normal"].font.name = "Calibri"
-        styles["Normal"].font.size = Pt(10.5)
-
-
-def make_paragraph_bold(paragraph) -> None:
-    if paragraph.runs:
-        for run in paragraph.runs:
-            run.bold = True
+    if level == 0:
+        run.font.size = Pt(20)
+    elif level == 1:
+        run.font.size = Pt(16)
+    elif level == 2:
+        run.font.size = Pt(13)
     else:
-        run = paragraph.add_run(paragraph.text)
-        run.bold = True
+        run.font.size = Pt(11.5)
 
 
-def add_docx_table(doc: Document, rows: list[list[str]]) -> None:
+def add_normal_paragraph(doc: Document, text: str) -> None:
+    p = doc.add_paragraph()
+    run = p.add_run(clean_md_inline(text))
+    run.font.name = "Calibri"
+    run.font.size = Pt(10.5)
+    run.font.color.rgb = COLOR_TEXT
+
+
+def add_bold_label_paragraph(doc: Document, label: str, rest: str = "", label_color: RGBColor = COLOR_LABEL) -> None:
+    p = doc.add_paragraph()
+    r1 = p.add_run(label)
+    r1.bold = True
+    r1.font.name = "Calibri"
+    r1.font.size = Pt(10.5)
+    r1.font.color.rgb = label_color
+
+    if rest:
+        r2 = p.add_run(rest)
+        r2.font.name = "Calibri"
+        r2.font.size = Pt(10.5)
+        r2.font.color.rgb = COLOR_TEXT
+
+
+def add_action_header(doc: Document, text: str) -> None:
+    """
+    Styles lines like:
+    ❌ Close
+    ➖ Reduce
+    ✅ Hold
+    ➕ Add
+    🔁 Replace
+    """
+    clean = clean_md_inline(text)
+    p = doc.add_paragraph()
+
+    # Try split icon and label
+    parts = clean.split(" ", 1)
+    icon = parts[0]
+    label = parts[1] if len(parts) > 1 else ""
+
+    color = COLOR_LABEL
+    if "Close" in clean:
+        color = COLOR_CLOSE
+    elif "Reduce" in clean:
+        color = COLOR_REDUCE
+    elif "Hold" in clean:
+        color = COLOR_HOLD
+    elif "Add" in clean:
+        color = COLOR_ADD
+    elif "Replace" in clean:
+        color = COLOR_LABEL
+
+    r1 = p.add_run(icon + " ")
+    r1.bold = True
+    r1.font.name = "Segoe UI Symbol"
+    r1.font.size = Pt(12)
+    r1.font.color.rgb = color
+
+    r2 = p.add_run(label)
+    r2.bold = True
+    r2.font.name = "Calibri"
+    r2.font.size = Pt(11.5)
+    r2.font.color.rgb = color
+
+
+def add_bullet(doc: Document, text: str) -> None:
+    p = doc.add_paragraph(style="List Bullet")
+    run = p.add_run(clean_md_inline(text))
+    run.font.name = "Calibri"
+    run.font.size = Pt(10.5)
+    run.font.color.rgb = COLOR_TEXT
+
+
+def add_numbered(doc: Document, text: str) -> None:
+    p = doc.add_paragraph(style="List Number")
+    run = p.add_run(clean_md_inline(text))
+    run.font.name = "Calibri"
+    run.font.size = Pt(10.5)
+    run.font.color.rgb = COLOR_TEXT
+
+
+def add_styled_table(doc: Document, rows: list[list[str]]) -> None:
     if not rows:
         return
 
@@ -88,64 +208,76 @@ def add_docx_table(doc: Document, rows: list[list[str]]) -> None:
     for r_idx, row in enumerate(rows):
         for c_idx in range(max_cols):
             value = row[c_idx] if c_idx < len(row) else ""
-            table.cell(r_idx, c_idx).text = value
+            cell = table.cell(r_idx, c_idx)
 
-    # Header bold
-    for cell in table.rows[0].cells:
-        for p in cell.paragraphs:
-            for run in p.runs:
-                run.bold = True
+            if r_idx == 0:
+                set_cell_text(cell, value, bold=True, color=COLOR_TEXT, font_size=10)
+                set_cell_shading(cell, TABLE_HEADER_FILL)
+            else:
+                set_cell_text(cell, value, bold=False, color=COLOR_TEXT, font_size=10)
+                if r_idx % 2 == 0:
+                    set_cell_shading(cell, TABLE_ALT_FILL)
+
+    doc.add_paragraph("")
 
 
-def is_section_header(line: str) -> bool:
+# ---------- CONTENT PARSING ----------
+def is_label_line(text: str) -> bool:
     """
-    Detects lines like:
-    '## 8. 🔁 Portfolio rotation plan'
+    For lines like:
+    - **Primary regime:** Late-Cycle Inflationary
+    - Primary regime: Late-Cycle Inflationary
     """
-    return bool(re.match(r"^##\s+\d+\.", line.strip()))
+    cleaned = clean_md_inline(text)
+    return ":" in cleaned and len(cleaned.split(":", 1)[0]) <= 45
 
 
-def is_subheader_like(line: str) -> bool:
-    """
-    Make lines bold in Word like:
-    ### ❌ Close
-    ### ➖ Reduce
-    ### ✅ Hold
-    ### ➕ Add
-    ### 🔁 Replace
-    """
-    stripped = line.strip()
-    return stripped.startswith("### ")
+def add_smart_paragraph(doc: Document, line: str) -> None:
+    cleaned = clean_md_inline(line)
+
+    # Bullet
+    if cleaned.startswith("- "):
+        add_bullet(doc, cleaned[2:])
+        return
+
+    # Numbered list
+    if re.match(r"^\d+\.\s+", cleaned):
+        add_numbered(doc, re.sub(r"^\d+\.\s+", "", cleaned))
+        return
+
+    # Action headers
+    if any(cleaned.startswith(prefix) for prefix in ["❌ ", "➖ ", "✅ ", "➕ ", "🔁 "]):
+        add_action_header(doc, cleaned)
+        return
+
+    # Label lines
+    if is_label_line(cleaned):
+        label, rest = cleaned.split(":", 1)
+        add_bold_label_paragraph(doc, f"{label.strip()}:", f" {rest.strip()}")
+        return
+
+    add_normal_paragraph(doc, cleaned)
 
 
 def build_docx_from_markdown(md_text: str, output_path: Path, send_date_str: str) -> None:
     doc = Document()
-    set_landscape(doc)
-    style_normal_text(doc)
+    set_document_layout(doc)
 
-    # Title with actual send date
-    title = doc.add_heading(f"Weekly Report Review {send_date_str}", level=0)
-    for run in title.runs:
-        run.bold = True
+    add_colored_heading(doc, f"Weekly Report Review {send_date_str}", level=0)
 
     lines = md_text.splitlines()
     i = 0
 
     while i < len(lines):
-        raw_line = lines[i]
-        line = raw_line.rstrip()
+        line = lines[i].rstrip()
 
         if not line.strip():
             doc.add_paragraph("")
             i += 1
             continue
 
-        # Detect markdown table block
-        if (
-            i + 1 < len(lines)
-            and is_markdown_table_line(lines[i])
-            and is_markdown_separator_line(lines[i + 1])
-        ):
+        # Table block
+        if i + 1 < len(lines) and is_markdown_table_line(lines[i]) and is_markdown_separator_line(lines[i + 1]):
             table_lines = [lines[i], lines[i + 1]]
             i += 2
             while i < len(lines) and is_markdown_table_line(lines[i]):
@@ -153,59 +285,37 @@ def build_docx_from_markdown(md_text: str, output_path: Path, send_date_str: str
                 i += 1
 
             rows = parse_markdown_table(table_lines)
-            add_docx_table(doc, rows)
-            doc.add_paragraph("")
+            add_styled_table(doc, rows)
             continue
 
-        # Main headings
+        # Headings
         if line.startswith("# "):
-            p = doc.add_heading(clean_md_inline(line[2:]), level=1)
-            make_paragraph_bold(p)
+            add_colored_heading(doc, clean_md_inline(line[2:]), level=1)
             i += 1
             continue
 
         if line.startswith("## "):
-            p = doc.add_heading(clean_md_inline(line[3:]), level=2)
-            make_paragraph_bold(p)
+            add_colored_heading(doc, clean_md_inline(line[3:]), level=2)
             i += 1
             continue
 
         if line.startswith("### "):
-            p = doc.add_heading(clean_md_inline(line[4:]), level=3)
-            make_paragraph_bold(p)
+            sub = clean_md_inline(line[4:])
+            if any(sub.startswith(prefix) for prefix in ["❌ ", "➖ ", "✅ ", "➕ ", "🔁 "]):
+                add_action_header(doc, sub)
+            else:
+                add_colored_heading(doc, sub, level=3)
             i += 1
             continue
 
-        # Bullets
-        if line.startswith("- "):
-            doc.add_paragraph(clean_md_inline(line[2:]), style="List Bullet")
-            i += 1
-            continue
-
-        # Numbered list
-        stripped = line.lstrip()
-        if re.match(r"^\d+\.\s+", stripped):
-            text = re.sub(r"^\d+\.\s+", "", stripped)
-            doc.add_paragraph(clean_md_inline(text), style="List Number")
-            i += 1
-            continue
-
-        # Normal paragraph
-        p = doc.add_paragraph(clean_md_inline(line))
-
-        # Make subheader-like normal lines bold if needed
-        if is_section_header(line) or is_subheader_like(line):
-            make_paragraph_bold(p)
-
+        add_smart_paragraph(doc, line)
         i += 1
 
     doc.save(output_path)
 
 
+# ---------- EMAIL BODY ----------
 def extract_section(md_text: str, section_number: int) -> list[str]:
-    """
-    Extract lines for a section like ## 8. ...
-    """
     lines = md_text.splitlines()
     result = []
     in_section = False
@@ -228,12 +338,6 @@ def extract_section(md_text: str, section_number: int) -> list[str]:
 
 
 def extract_summary_and_rotation(md_text: str) -> str:
-    """
-    Email body:
-    - Executive summary
-    - Bottom line
-    - Section 8 Portfolio rotation plan
-    """
     lines = md_text.splitlines()
 
     body_lines = []
@@ -263,20 +367,15 @@ def extract_summary_and_rotation(md_text: str) -> str:
             if stripped:
                 body_lines.append(clean_md_inline(stripped))
 
-    # Add section 8 with icons
     section8 = extract_section(md_text, 8)
     if section8:
         body_lines.append("\nPORTFOLIO ROTATION PLAN\n")
-
         for line in section8:
             stripped = line.strip()
             if not stripped:
                 continue
-
-            # Skip original section title if you want cleaner body
             if re.match(r"^##\s+8\.", stripped):
                 continue
-
             if stripped.startswith("### "):
                 body_lines.append(clean_md_inline(stripped[4:]))
             elif stripped.startswith("- "):
@@ -284,15 +383,11 @@ def extract_summary_and_rotation(md_text: str) -> str:
             else:
                 body_lines.append(clean_md_inline(stripped))
 
-    if not body_lines:
-        fallback = [clean_md_inline(ln) for ln in lines if ln.strip()]
-        body_lines = fallback[:25]
-
-    summary = "\n".join(body_lines).strip()
-    summary += "\n\nFull formatted report is attached as a Word document."
-    return summary
+    body_lines.append("\nFull formatted report is attached as a Word document.")
+    return "\n".join(body_lines).strip()
 
 
+# ---------- MAIN ----------
 def main() -> None:
     output_dir = Path("output")
     reports = sorted(output_dir.glob("weekly_analysis_*.md"))
@@ -303,14 +398,11 @@ def main() -> None:
     latest_report = reports[-1]
     md_text = latest_report.read_text(encoding="utf-8")
 
-    # Actual send date
     send_date_str = datetime.now().strftime("%Y-%m-%d")
 
-    # DOCX filename
     docx_path = latest_report.with_name(f"weekly_report_review_{send_date_str}.docx")
     build_docx_from_markdown(md_text, docx_path, send_date_str)
 
-    # Mail subject with actual send date
     subject = f"Weekly Report Review {send_date_str}"
     body = extract_summary_and_rotation(md_text)
 
