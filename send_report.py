@@ -13,13 +13,13 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt, RGBColor
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 
 # ---------- COLORS ----------
 COLOR_TEXT = RGBColor(40, 40, 40)
-COLOR_HEADING = RGBColor(47, 85, 151)          # dark blue
-COLOR_LABEL = RGBColor(31, 78, 121)            # blue accent
-COLOR_MUTED = RGBColor(90, 90, 90)
+COLOR_HEADING = RGBColor(47, 85, 151)
+COLOR_LABEL = RGBColor(31, 78, 121)
 
 COLOR_ADD = RGBColor(0, 128, 0)
 COLOR_HOLD = RGBColor(0, 128, 0)
@@ -36,21 +36,39 @@ PRO_HEADER_FILL = "E2F0D9"
 CONTRA_HEADER_FILL = "FCE4D6"
 
 
-# ---------- BASIC HELPERS ----------
+# ---------- CLEANUP ----------
+def strip_citations(text: str) -> str:
+    """
+    Remove web/file citation artifacts and similar non-user-friendly markers.
+    """
+    text = re.sub(r"", "", text)
+    text = re.sub(r"", "", text)
+    text = re.sub(r"", "", text)
+    text = re.sub(r"\[\([^)]+\)\]", "", text)
+    return text
+
+
 def clean_md_inline(text: str) -> str:
+    text = strip_citations(text)
     text = text.replace("**", "")
     text = text.replace("`", "")
     text = text.replace("<u>", "").replace("</u>", "")
+    text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
-def set_cell_shading(cell, fill: str) -> None:
-    tc_pr = cell._tc.get_or_add_tcPr()
-    shd = OxmlElement("w:shd")
-    shd.set(qn("w:fill"), fill)
-    tc_pr.append(shd)
+def extract_tradingview_url(text: str) -> str | None:
+    m = re.search(r"\(https://www\.tradingview\.com/chart/\?symbol=[^)]+\)", text)
+    if m:
+        return m.group(0).strip("()")
+    return None
 
 
+def is_markdown_link_line(text: str) -> bool:
+    return bool(re.match(r"^\[.*?\]\(https?://.*?\)$", text.strip()))
+
+
+# ---------- DOCX HELPERS ----------
 def set_document_layout(doc: Document) -> None:
     section = doc.sections[0]
     section.orientation = WD_ORIENT.LANDSCAPE
@@ -80,6 +98,45 @@ def add_colored_heading(doc: Document, text: str, level: int) -> None:
     paragraph_run(p, text, bold=True, color=COLOR_HEADING, size=size_map.get(level, 11.5))
 
 
+def add_hyperlink(paragraph, text: str, url: str, color="0563C1", underline=True):
+    """
+    Add a clickable hyperlink to a Word paragraph.
+    """
+    part = paragraph.part
+    r_id = part.relate_to(url, RT.HYPERLINK, is_external=True)
+
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
+
+    new_run = OxmlElement("w:r")
+    r_pr = OxmlElement("w:rPr")
+
+    c = OxmlElement("w:color")
+    c.set(qn("w:val"), color)
+    r_pr.append(c)
+
+    if underline:
+        u = OxmlElement("w:u")
+        u.set(qn("w:val"), "single")
+        r_pr.append(u)
+
+    t = OxmlElement("w:t")
+    t.text = text
+
+    new_run.append(r_pr)
+    new_run.append(t)
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
+    return hyperlink
+
+
+def set_cell_shading(cell, fill: str) -> None:
+    tc_pr = cell._tc.get_or_add_tcPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:fill"), fill)
+    tc_pr.append(shd)
+
+
 def is_markdown_table_line(line: str) -> bool:
     line = line.strip()
     return line.startswith("|") and line.endswith("|") and "|" in line[1:-1]
@@ -105,26 +162,22 @@ def parse_markdown_table(lines: list[str]) -> list[list[str]]:
     return rows
 
 
-# ---------- FUNCTIONAL COLORS ----------
 def color_for_term(text: str):
     t = text.lower().strip()
-
     if "overweight" in t:
         return COLOR_OVERWEIGHT
     if "underweight" in t:
         return COLOR_UNDERWEIGHT
     if t == "neutral" or " neutral" in t:
         return COLOR_NEUTRAL
-
-    if "add" == t or t.startswith("add "):
+    if t == "add" or t.startswith("add "):
         return COLOR_ADD
-    if "hold" == t or t.startswith("hold "):
+    if t == "hold" or t.startswith("hold "):
         return COLOR_HOLD
-    if "reduce" == t or t.startswith("reduce "):
+    if t == "reduce" or t.startswith("reduce "):
         return COLOR_REDUCE
-    if "close" == t or t.startswith("close "):
+    if t == "close" or t.startswith("close "):
         return COLOR_CLOSE
-
     return COLOR_TEXT
 
 
@@ -170,6 +223,8 @@ def add_numbered(doc: Document, text: str) -> None:
 
 def add_normal_paragraph(doc: Document, text: str) -> None:
     cleaned = clean_md_inline(text)
+    if not cleaned:
+        return
 
     if ":" in cleaned and len(cleaned.split(":", 1)[0]) <= 45:
         label, rest = cleaned.split(":", 1)
@@ -180,27 +235,22 @@ def add_normal_paragraph(doc: Document, text: str) -> None:
     paragraph_run(p, cleaned, color=color_for_term(cleaned))
 
 
-# ---------- TABLE STYLING ----------
+def is_pro_contra_table(rows: list[list[str]]) -> bool:
+    if len(rows) < 2:
+        return False
+    if len(rows[0]) != 2:
+        return False
+    headers = [c.lower().strip() for c in rows[0]]
+    pro_like = any("pro" in h or "argument" in h for h in headers)
+    contra_like = any("contra" in h or "invalidation" in h for h in headers)
+    return pro_like and contra_like
+
+
 def set_cell_text(cell, text: str, bold: bool = False, color: RGBColor | None = None, font_size: float = 10.0):
     cell.text = ""
     p = cell.paragraphs[0]
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     paragraph_run(p, text, bold=bold, color=color or COLOR_TEXT, size=font_size)
-
-
-def is_pro_contra_table(rows: list[list[str]]) -> bool:
-    """
-    Detect 2-column, 4-row-ish table with pro/contra structure.
-    """
-    if len(rows) < 2:
-        return False
-    if len(rows[0]) != 2:
-        return False
-
-    headers = [c.lower().strip() for c in rows[0]]
-    pro_like = any("pro" in h or "argument" in h for h in headers)
-    contra_like = any("contra" in h or "invalidation" in h for h in headers)
-    return pro_like and contra_like
 
 
 def add_styled_table(doc: Document, rows: list[list[str]]) -> None:
@@ -238,21 +288,46 @@ def add_styled_table(doc: Document, rows: list[list[str]]) -> None:
 def build_docx_from_markdown(md_text: str, output_path: Path, send_date_str: str) -> None:
     doc = Document()
     set_document_layout(doc)
-
     add_colored_heading(doc, f"Weekly Report Review {send_date_str}", level=0)
 
     lines = md_text.splitlines()
     i = 0
+    skip_exec_summary = False
 
     while i < len(lines):
         line = lines[i].rstrip()
+        stripped = line.strip()
 
-        if not line.strip():
+        # Skip Executive Summary section entirely
+        if re.match(r"^##\s+1\.", stripped):
+            skip_exec_summary = True
+            i += 1
+            continue
+
+        if skip_exec_summary and re.match(r"^##\s+\d+\.", stripped):
+            skip_exec_summary = False
+
+        if skip_exec_summary:
+            i += 1
+            continue
+
+        if not stripped:
             doc.add_paragraph("")
             i += 1
             continue
 
-        # Markdown table block
+        # TradingView links: preserve as clickable docx links
+        if is_markdown_link_line(stripped):
+            m = re.match(r"^\[(.*?)\]\((https?://.*?)\)$", stripped)
+            if m:
+                link_text = clean_md_inline(m.group(1))
+                url = m.group(2)
+                p = doc.add_paragraph()
+                add_hyperlink(p, link_text, url)
+            i += 1
+            continue
+
+        # Table block
         if i + 1 < len(lines) and is_markdown_table_line(lines[i]) and is_markdown_separator_line(lines[i + 1]):
             table_lines = [lines[i], lines[i + 1]]
             i += 2
@@ -283,14 +358,13 @@ def build_docx_from_markdown(md_text: str, output_path: Path, send_date_str: str
             i += 1
             continue
 
-        # Bullets
         cleaned = clean_md_inline(line)
+
         if cleaned.startswith("- "):
             add_bullet(doc, cleaned[2:])
             i += 1
             continue
 
-        # Numbered
         if re.match(r"^\d+\.\s+", cleaned):
             add_numbered(doc, re.sub(r"^\d+\.\s+", "", cleaned))
             i += 1
@@ -310,15 +384,12 @@ def extract_section(md_text: str, section_number: int) -> list[str]:
 
     for line in lines:
         stripped = line.strip()
-
         if re.match(rf"^##\s+{section_number}\.", stripped):
             in_section = True
             result.append(stripped)
             continue
-
         if in_section and re.match(r"^##\s+\d+\.", stripped):
             break
-
         if in_section:
             result.append(line)
 
@@ -328,7 +399,6 @@ def extract_section(md_text: str, section_number: int) -> list[str]:
 def extract_top_opportunities(md_text: str, max_items: int = 4) -> list[str]:
     lines = md_text.splitlines()
     results = []
-
     for line in lines:
         stripped = line.strip()
         if stripped.startswith("### [Rank "):
@@ -339,79 +409,118 @@ def extract_top_opportunities(md_text: str, max_items: int = 4) -> list[str]:
     return results
 
 
-def build_email_body(md_text: str, send_date_str: str) -> str:
-    """
-    Maximum readability within email-body limitations.
-    """
-    lines = md_text.splitlines()
-
-    body = []
-    body.append(f"WEEKLY REPORT REVIEW {send_date_str}")
-    body.append("=" * (22 + len(send_date_str)))
-    body.append("")
-
-    # Executive summary
-    in_exec = False
-    for line in lines:
-        stripped = line.strip()
-
-        if stripped.startswith("## 1."):
-            in_exec = True
-            body.append("EXECUTIVE SUMMARY")
-            body.append("")
-            continue
-
-        if in_exec and stripped.startswith("## ") and not stripped.startswith("## 1."):
-            break
-
-        if in_exec and stripped:
-            body.append(clean_md_inline(stripped))
-
-    # Top opportunities
+def build_email_body_html(md_text: str, send_date_str: str) -> str:
     top_ops = extract_top_opportunities(md_text)
-    if top_ops:
-        body.append("")
-        body.append("TOP OPPORTUNITIES")
-        body.append("")
-        for item in top_ops:
-            body.append(f"• {item}")
-
-    # Rotation plan
     section8 = extract_section(md_text, 8)
+    bottom = extract_section(md_text, 11)
+
+    def esc(text: str) -> str:
+        text = clean_md_inline(text)
+        return (
+            text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    rotation_html = ""
     if section8:
-        body.append("")
-        body.append("PORTFOLIO ROTATION PLAN")
-        body.append("")
+        blocks = []
+        current_header = None
+        current_items = []
+
         for line in section8:
-            stripped = line.strip()
-            if not stripped or re.match(r"^##\s+8\.", stripped):
+            s = line.strip()
+            if not s or re.match(r"^##\s+8\.", s):
                 continue
-            if stripped.startswith("### "):
-                body.append(clean_md_inline(stripped[4:]))
-            elif stripped.startswith("- "):
-                body.append(f"  • {clean_md_inline(stripped[2:])}")
+
+            if s.startswith("### "):
+                if current_header:
+                    items_html = "".join(f"<li>{esc(item)}</li>" for item in current_items)
+                    blocks.append(f"""
+                    <div style="margin:0 0 14px 0;">
+                      <div style="font-weight:700; margin-bottom:4px;">{esc(current_header)}</div>
+                      <ul style="margin:4px 0 0 18px; padding:0;">{items_html}</ul>
+                    </div>
+                    """)
+                current_header = clean_md_inline(s[4:])
+                current_items = []
+            elif s.startswith("- "):
+                current_items.append(s[2:])
             else:
-                body.append(clean_md_inline(stripped))
+                current_items.append(s)
 
-    # Bottom line
-    in_bottom = False
-    body.append("")
-    body.append("BOTTOM LINE")
-    body.append("")
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("## 11."):
-            in_bottom = True
-            continue
-        if in_bottom and stripped.startswith("## ") and not stripped.startswith("## 11."):
-            break
-        if in_bottom and stripped:
-            body.append(clean_md_inline(stripped))
+        if current_header:
+            items_html = "".join(f"<li>{esc(item)}</li>" for item in current_items)
+            blocks.append(f"""
+            <div style="margin:0 0 14px 0;">
+              <div style="font-weight:700; margin-bottom:4px;">{esc(current_header)}</div>
+              <ul style="margin:4px 0 0 18px; padding:0;">{items_html}</ul>
+            </div>
+            """)
 
-    body.append("")
-    body.append("The full formatted report is attached as a Word document.")
+        rotation_html = "".join(blocks)
 
-    return "\n".join(body).strip()
+    top_ops_html = ""
+    if top_ops:
+        items = "".join(f"<li>{esc(item)}</li>" for item in top_ops)
+        top_ops_html = f"""
+        <div style="margin-top:22px;">
+          <div style="font-size:16px; font-weight:700; color:#2F5597; margin-bottom:8px;">Top opportunities</div>
+          <ul style="margin:0 0 0 18px; padding:0; line-height:1.6;">{items}</ul>
+        </div>
+        """
+
+    bottom_html = ""
+    if bottom:
+        items = []
+        for line in bottom:
+            s = line.strip()
+            if not s or re.match(r"^##\s+11\.", s):
+                continue
+            if s.startswith("- "):
+                items.append(f"<li>{esc(s[2:])}</li>")
+            else:
+                items.append(f"<div style='margin:0 0 8px 0;'>{esc(s)}</div>")
+
+        bottom_html = f"""
+        <div style="margin-top:24px;">
+          <div style="font-size:16px; font-weight:700; color:#2F5597; margin-bottom:8px;">Bottom line</div>
+          {''.join(items)}
+        </div>
+        """
+
+    html = f"""
+    <html>
+      <body style="margin:0; padding:0; background:#f6f8fb; font-family:Calibri, Arial, sans-serif; color:#282828;">
+        <div style="max-width:860px; margin:0 auto; padding:28px 20px;">
+          <div style="background:#ffffff; border:1px solid #d9e2f0; border-radius:10px; padding:28px 30px;">
+            <div style="font-size:24px; font-weight:700; color:#2F5597; margin-bottom:6px;">
+              Weekly Report Review {send_date_str}
+            </div>
+            <div style="font-size:13px; color:#666666; margin-bottom:22px;">
+              Automatically generated weekly ETF report
+            </div>
+
+            {top_ops_html}
+
+            <div style="margin-top:24px;">
+              <div style="font-size:16px; font-weight:700; color:#2F5597; margin-bottom:10px;">
+                Portfolio rotation plan
+              </div>
+              {rotation_html}
+            </div>
+
+            {bottom_html}
+
+            <div style="margin-top:26px; padding-top:16px; border-top:1px solid #e6ecf5; color:#555555; font-size:13px;">
+              The full formatted report is attached as a Word document.
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+    """
+    return html.strip()
 
 
 # ---------- MAIN ----------
@@ -431,7 +540,7 @@ def main() -> None:
     build_docx_from_markdown(md_text, docx_path, send_date_str)
 
     subject = f"Weekly Report Review {send_date_str}"
-    body = build_email_body(md_text, send_date_str)
+    html_body = build_email_body_html(md_text, send_date_str)
 
     smtp_host = os.environ["MRKT_RPRTS_SMTP_HOST"]
     smtp_port = int(os.environ.get("MRKT_RPRTS_SMTP_PORT") or "587")
@@ -445,7 +554,7 @@ def main() -> None:
     msg["From"] = mail_from
     msg["To"] = mail_to
 
-    msg.attach(MIMEText(body, "plain", "utf-8"))
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     with open(docx_path, "rb") as f:
         attachment = MIMEApplication(
