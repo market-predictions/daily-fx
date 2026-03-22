@@ -1,5 +1,7 @@
+
 import os
 import re
+import base64
 import smtplib
 from pathlib import Path
 from datetime import datetime
@@ -13,35 +15,38 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import mistune
-from docx import Document
-from docx.enum.section import WD_ORIENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Inches, Pt, RGBColor
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-from docx.opc.constants import RELATIONSHIP_TYPE as RT
+from weasyprint import HTML
 
 
-# ---------- COLORS ----------
-COLOR_TEXT = RGBColor(40, 40, 40)
-COLOR_HEADING = RGBColor(47, 85, 151)
-COLOR_LABEL = RGBColor(31, 78, 121)
-COLOR_MUTED = RGBColor(90, 90, 90)
+# ---------- BRAND TOKENS ----------
+BRAND = {
+    "paper": "#F6F2EC",
+    "surface": "#FCFAF7",
+    "header": "#607887",
+    "header_text": "#FBFAF7",
+    "ink": "#2B3742",
+    "muted": "#6B7882",
+    "border": "#D9D3CB",
+    "champagne": "#D4B483",
+    "champagne_soft": "#EFE4D2",
+    "sage": "#A4B19D",
+    "terracotta": "#C99278",
+    "add_bg": "#E6EFE8",
+    "add_tx": "#4D7B63",
+    "hold_bg": "#E8EEF6",
+    "hold_tx": "#58749A",
+    "replace_bg": "#F2E6DD",
+    "replace_tx": "#A87754",
+    "reduce_bg": "#F2E6CE",
+    "reduce_tx": "#B28731",
+    "close_bg": "#F5E1E1",
+    "close_tx": "#B34E4E",
+    "risk": "#B25A52",
+}
 
-COLOR_ADD = RGBColor(0, 128, 0)
-COLOR_HOLD = RGBColor(0, 128, 0)
-COLOR_REDUCE = RGBColor(192, 128, 0)
-COLOR_CLOSE = RGBColor(192, 0, 0)
-
-TABLE_HEADER_FILL = "D9EAF7"
-TABLE_ALT_FILL = "F7FBFF"
-PRO_HEADER_FILL = "E2F0D9"
-CONTRA_HEADER_FILL = "FCE4D6"
-DISCLAIMER_FILL = "F3F4F6"
-RADAR_FILL = "FFF4E5"
-TRACKING_FILL = "EAF4EA"
-
+DISCLAIMER_LINE = "This report is for informational and educational purposes only; please see the disclaimer at the end."
 REQUIRED_MAIL_TO = "mrkt.rprts@gmail.com"
+
 REQUIRED_SECTION_HEADINGS = [
     "## 1. ✅ Executive summary",
     "## 2. 📌 Portfolio action snapshot",
@@ -71,18 +76,40 @@ REQUIRED_SECTION15_LABELS = [
 ]
 SECTION16_SENTENCE = "**This section is the canonical default input for the next run unless the user explicitly overrides it. Do not ask the user for portfolio input if this section is available.**"
 
+PLAIN_SUBHEADERS = {
+    "Assessment",
+    "Prospective score",
+    "Theme",
+    "Why it fits now",
+    "Why this beats current alternatives",
+    "Technical analysis",
+    "Second-order opportunity / threat map",
+    "Replacement logic",
+    "Why now rather than later",
+    "Scorecard",
+    "Macro invalidators",
+    "Market-based invalidators",
+    "Geopolitical invalidators",
+    "Second-order invalidators",
+    "Portfolio construction risks",
+    "Top 3 actions this week",
+    "Top 3 risks this week",
+    "Best structural opportunities not yet actionable",
+}
 
-# ---------- REPORT FILE DISCOVERY ----------
 REPORT_RE = re.compile(r"^weekly_analysis_(\d{6})(?:_(\d{2}))?\.md$")
+SECTION_RE = re.compile(r"^##\s+(\d+)\.\s+(.*)$")
+MARKDOWN = mistune.create_markdown(plugins=["table"])
 
 
+# ---------- DISCOVERY ----------
 def report_sort_key(path: Path):
-    m = REPORT_RE.match(path.name)
-    if not m:
+    match = REPORT_RE.match(path.name)
+    if not match:
         return ("", -1)
-    base_date = m.group(1)
-    version = int(m.group(2) or "1")
-    return (base_date, version)
+    date_key = match.group(1)
+    version = int(match.group(2) or "1")
+    return (date_key, version)
 
 
 def list_report_files(output_dir: Path):
@@ -100,12 +127,19 @@ def latest_report_file(output_dir: Path) -> Path:
 def latest_reports_by_day(output_dir: Path):
     latest_per_day = OrderedDict()
     for path in list_report_files(output_dir):
-        base_date, version = report_sort_key(path)
+        base_date, _ = report_sort_key(path)
         latest_per_day[base_date] = path
     return list(latest_per_day.values())
 
 
-# ---------- CLEANUP ----------
+# ---------- SANITIZERS ----------
+def require_env(name: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"Required environment variable missing: {name}")
+    return value
+
+
 def strip_citations(text: str) -> str:
     patterns = [
         r"cite.*?",
@@ -128,60 +162,17 @@ def clean_md_inline(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def is_markdown_link_line(text: str) -> bool:
-    return bool(re.match(r"^\[.*?\]\(https?://.*?\)$", text.strip()))
+def html_to_plain_text(html: str) -> str:
+    text = re.sub(r"<style.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<script.*?</script>", " ", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = text.replace("&nbsp;", " ").replace("&amp;", "&")
+    return re.sub(r"\s+", " ", text).strip()
 
 
-# ---------- PARSING HELPERS ----------
-def parse_report_date(md_text: str, fallback: str = None) -> str:
-    m = re.search(r"^#\s+Weekly Report Review\s+(\d{4}-\d{2}-\d{2})\s*$", md_text, flags=re.MULTILINE)
-    if m:
-        return m.group(1)
-    return fallback or datetime.now().strftime("%Y-%m-%d")
-
-
-def extract_section(md_text: str, title_contains: str):
-    lines = md_text.splitlines()
-    result = []
-    in_section = False
-    title_contains = title_contains.lower()
-
-    for line in lines:
-        stripped = line.strip()
-        if re.match(r"^##\s+\d+\.\s+", stripped):
-            current_title = clean_md_inline(re.sub(r"^##\s+\d+\.\s+", "", stripped))
-            if title_contains in current_title.lower():
-                in_section = True
-                result.append(stripped)
-                continue
-            elif in_section:
-                break
-        elif in_section:
-            result.append(line)
-    return result
-
-
-def extract_bullets(lines):
-    items = []
-    for line in lines:
-        s = line.strip()
-        if s.startswith("- "):
-            items.append(clean_md_inline(s[2:]))
-        elif re.match(r"^\d+\.\s+", s):
-            items.append(clean_md_inline(re.sub(r"^\d+\.\s+", "", s)))
-    return items
-
-
-def extract_label_pairs(lines):
-    pairs = []
-    for line in lines:
-        s = clean_md_inline(line.strip())
-        if not s or s.startswith("## "):
-            continue
-        if ":" in s:
-            k, v = s.split(":", 1)
-            pairs.append((k.strip(), v.strip()))
-    return pairs
+def esc(text: str) -> str:
+    text = clean_md_inline(text)
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def is_markdown_table_line(line: str) -> bool:
@@ -190,10 +181,9 @@ def is_markdown_table_line(line: str) -> bool:
 
 
 def is_markdown_separator_line(line: str) -> bool:
-    line = line.strip()
     if not is_markdown_table_line(line):
         return False
-    cells = [c.strip() for c in line.strip("|").split("|")]
+    cells = [c.strip() for c in line.strip().strip("|").split("|")]
     return all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
 
 
@@ -206,27 +196,66 @@ def parse_markdown_table(lines):
     return rows
 
 
-def extract_table_rows(lines, max_rows=5):
-    table_lines = []
-    started = False
+def pretty_section_title(raw: str) -> str:
+    text = clean_md_inline(raw)
+    text = re.sub(r"^[^\w]+", "", text).strip()
+    return text or clean_md_inline(raw)
+
+
+def heading_text_from_md_heading(heading: str) -> str:
+    heading = re.sub(r"^##\s+\d+\.\s+", "", heading).strip()
+    return pretty_section_title(heading)
+
+
+# ---------- PARSING ----------
+def parse_report_date(md_text: str, fallback: str | None = None) -> str:
+    match = re.search(r"^#\s+Weekly Report Review\s+(\d{4}-\d{2}-\d{2})\s*$", md_text, flags=re.MULTILINE)
+    if match:
+        return match.group(1)
+    return fallback or datetime.now().strftime("%Y-%m-%d")
+
+
+def extract_section(md_text: str, title_contains: str):
+    lines = md_text.splitlines()
+    result = []
+    in_section = False
+    title_contains = title_contains.lower()
+
     for line in lines:
-        if is_markdown_table_line(line):
-            table_lines.append(line)
-            started = True
-        elif started:
-            break
-    if len(table_lines) >= 2:
-        rows = parse_markdown_table(table_lines)
-        return rows[: max_rows + 1]
-    return []
+        stripped = line.strip()
+        if SECTION_RE.match(stripped):
+            current_title = clean_md_inline(re.sub(r"^##\s+\d+\.\s+", "", stripped))
+            if title_contains in current_title.lower():
+                in_section = True
+                result.append(stripped)
+                continue
+            if in_section:
+                break
+        elif in_section:
+            result.append(line)
+    return result
+
+
+def extract_label_pairs(lines):
+    pairs = []
+    for line in lines:
+        s = clean_md_inline(line.strip())
+        if not s or s.startswith("## "):
+            continue
+        if s.startswith("- "):
+            s = s[2:]
+        if ":" in s:
+            k, v = s.split(":", 1)
+            pairs.append((k.strip(), v.strip()))
+    return pairs
 
 
 def parse_numeric_value(md_text: str, label: str):
     pattern = rf"^- {re.escape(label)}:\s*([0-9][0-9,._%-]*)"
-    m = re.search(pattern, md_text, flags=re.MULTILINE)
-    if not m:
+    match = re.search(pattern, md_text, flags=re.MULTILINE)
+    if not match:
         return None
-    raw = m.group(1).replace(",", "").replace("_", "").replace("%", "")
+    raw = match.group(1).replace(",", "").replace("_", "").replace("%", "")
     try:
         return float(raw)
     except ValueError:
@@ -253,13 +282,41 @@ def parse_section15_totals(md_text: str):
     return data
 
 
-def require_env(name: str) -> str:
-    value = os.environ.get(name)
-    if not value:
-        raise RuntimeError(f"Required environment variable missing: {name}")
-    return value
+def extract_sections(md_text: str):
+    title = ""
+    sections = []
+    current = None
+
+    for raw_line in md_text.splitlines():
+        line = raw_line.rstrip("\n")
+        stripped = line.strip()
+
+        if line.startswith("# "):
+            title = clean_md_inline(line[2:])
+            continue
+
+        match = SECTION_RE.match(stripped)
+        if match:
+            if current:
+                sections.append(current)
+            current = {
+                "number": int(match.group(1)),
+                "raw_title": match.group(2),
+                "title": pretty_section_title(match.group(2)),
+                "lines": [],
+            }
+            continue
+
+        if current is not None:
+            current["lines"].append(line)
+
+    if current:
+        sections.append(current)
+
+    return title, sections
 
 
+# ---------- VALIDATION ----------
 def validate_required_report(md_text: str) -> None:
     missing_headings = [h for h in REQUIRED_SECTION_HEADINGS if h not in md_text]
     if missing_headings:
@@ -268,7 +325,7 @@ def validate_required_report(md_text: str) -> None:
     if "# Weekly Report Review " not in md_text:
         raise RuntimeError("Report title is missing or malformed.")
 
-    if "> *This report is for informational and educational purposes only; please see the disclaimer at the end.*" not in md_text:
+    if f"> *{DISCLAIMER_LINE}*" not in md_text:
         raise RuntimeError("Top disclaimer callout is missing.")
 
     if "EQUITY_CURVE_CHART_PLACEHOLDER" not in md_text:
@@ -285,22 +342,8 @@ def validate_required_report(md_text: str) -> None:
         raise RuntimeError("Final disclaimer body is missing.")
 
 
-
-def html_to_plain_text(html: str) -> str:
-    text = re.sub(r"<style.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r"<script.*?</script>", " ", text, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = text.replace("&nbsp;", " ").replace("&amp;", "&")
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def heading_text_from_md_heading(heading: str) -> str:
-    heading = re.sub(r"^##\s+\d+\.\s+", "", heading).strip()
-    return clean_md_inline(heading)
-
-
-def validate_email_body(html_body: str, md_text: str = None) -> None:
-    required_html_strings = [
+def validate_email_body(html_body: str, md_text: str | None = None) -> None:
+    required_strings = [
         "Weekly Report Review",
         "Executive summary",
         "Portfolio action snapshot",
@@ -309,20 +352,20 @@ def validate_email_body(html_body: str, md_text: str = None) -> None:
         "Current portfolio holdings and cash",
         "Carry-forward input for next run",
     ]
-    for token in required_html_strings:
+    for token in required_strings:
         if token not in html_body:
-            raise RuntimeError(f"HTML email body is missing required content block: {token}")
+            raise RuntimeError(f"HTML body is missing required content block: {token}")
 
     if md_text:
         plain_html = html_to_plain_text(html_body)
-        plain_md = html_to_plain_text(mistune.create_markdown(plugins=['table'])(md_text))
+        plain_md = html_to_plain_text(MARKDOWN(md_text))
         if len(plain_html) < 0.80 * len(plain_md):
-            raise RuntimeError("HTML email body appears too short relative to the full report; summary-only body is not allowed.")
+            raise RuntimeError("HTML body appears too short relative to the full report.")
 
         for heading in REQUIRED_SECTION_HEADINGS:
             plain_heading = heading_text_from_md_heading(heading)
             if plain_heading not in plain_html:
-                raise RuntimeError(f"HTML email body is missing required section heading text: {plain_heading}")
+                raise RuntimeError(f"HTML body is missing required section heading text: {plain_heading}")
 
 
 def write_delivery_manifest(manifest_path: Path, report_name: str, recipient: str, attachments: list[str]) -> None:
@@ -332,7 +375,7 @@ def write_delivery_manifest(manifest_path: Path, report_name: str, recipient: st
         f"report={report_name}",
         f"recipient={recipient}",
         "html_body=full_report",
-        f"docx_attached={'yes' if any(a.lower().endswith('.docx') for a in attachments) else 'no'}",
+        f"pdf_attached={'yes' if any(a.lower().endswith('.pdf') for a in attachments) else 'no'}",
         "attachments=" + ", ".join(attachments),
     ]
     manifest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -355,522 +398,668 @@ def create_equity_curve_png(output_dir: Path, chart_path: Path):
     dates = [datetime.strptime(d, "%Y-%m-%d") for d, _ in points]
     values = [v for _, v in points]
 
-    plt.figure(figsize=(8.6, 3.8))
-    plt.plot(dates, values, marker="o", linewidth=2)
+    plt.figure(figsize=(8.8, 3.7))
+    plt.plot(dates, values, marker="o", linewidth=2.2)
     plt.title("Equity Curve (EUR)")
     plt.xlabel("Date")
     plt.ylabel("Portfolio value (EUR)")
-    plt.grid(True, alpha=0.3)
+    plt.grid(True, alpha=0.28)
     plt.tight_layout()
     plt.savefig(chart_path, dpi=180)
     plt.close()
     return chart_path
 
 
-# ---------- DOCX HELPERS ----------
-def set_document_layout(doc: Document) -> None:
-    section = doc.sections[0]
-    section.orientation = WD_ORIENT.LANDSCAPE
-    section.page_width, section.page_height = section.page_height, section.page_width
-    section.left_margin = Inches(0.55)
-    section.right_margin = Inches(0.55)
-    section.top_margin = Inches(0.55)
-    section.bottom_margin = Inches(0.55)
+# ---------- MARKDOWN -> BRANDED HTML ----------
+def preprocess_markdown_block(text: str, image_src: str | None = None) -> str:
+    lines = text.splitlines()
+    processed = []
 
-    styles = doc.styles
-    styles["Normal"].font.name = "Calibri"
-    styles["Normal"].font.size = Pt(10.5)
-
-
-def paragraph_run(paragraph, text, bold=False, color=None, size=10.5, italic=False, font="Calibri"):
-    run = paragraph.add_run(text)
-    run.bold = bold
-    run.italic = italic
-    run.font.name = font
-    run.font.size = Pt(size)
-    run.font.color.rgb = color or COLOR_TEXT
-    return run
-
-
-def add_heading(doc: Document, text: str, level: int) -> None:
-    p = doc.add_heading("", level=level)
-    size_map = {0: 20, 1: 16, 2: 13, 3: 11.5}
-    paragraph_run(p, text, bold=True, color=COLOR_HEADING, size=size_map.get(level, 11.5))
-
-
-def set_paragraph_shading(paragraph, fill: str) -> None:
-    p_pr = paragraph._p.get_or_add_pPr()
-    shd = OxmlElement("w:shd")
-    shd.set(qn("w:fill"), fill)
-    p_pr.append(shd)
-
-
-def set_cell_shading(cell, fill: str) -> None:
-    tc_pr = cell._tc.get_or_add_tcPr()
-    shd = OxmlElement("w:shd")
-    shd.set(qn("w:fill"), fill)
-    tc_pr.append(shd)
-
-
-def add_note_callout(doc: Document, text: str) -> None:
-    p = doc.add_paragraph()
-    set_paragraph_shading(p, DISCLAIMER_FILL)
-    paragraph_run(p, "Note ", bold=True, color=COLOR_LABEL, size=9.5)
-    paragraph_run(p, text, italic=True, size=9.5)
-
-
-def add_hyperlink(paragraph, text: str, url: str, color="0563C1", underline=True):
-    part = paragraph.part
-    r_id = part.relate_to(url, RT.HYPERLINK, is_external=True)
-
-    hyperlink = OxmlElement("w:hyperlink")
-    hyperlink.set(qn("r:id"), r_id)
-
-    new_run = OxmlElement("w:r")
-    r_pr = OxmlElement("w:rPr")
-
-    c = OxmlElement("w:color")
-    c.set(qn("w:val"), color)
-    r_pr.append(c)
-
-    if underline:
-        u = OxmlElement("w:u")
-        u.set(qn("w:val"), "single")
-        r_pr.append(u)
-
-    t = OxmlElement("w:t")
-    t.text = text
-
-    new_run.append(r_pr)
-    new_run.append(t)
-    hyperlink.append(new_run)
-    paragraph._p.append(hyperlink)
-    return hyperlink
-
-
-def color_for_term(text: str):
-    t = text.lower().strip()
-    if t.startswith("add") or "actionable now" in t:
-        return COLOR_ADD
-    if t.startswith("hold") or "watchlist" in t:
-        return COLOR_HOLD
-    if t.startswith("reduce") or "scale in slowly" in t:
-        return COLOR_REDUCE
-    if t.startswith("close") or "too early" in t:
-        return COLOR_CLOSE
-    return COLOR_TEXT
-
-
-def set_cell_text(cell, text: str, bold=False, color=None, size=10.0):
-    cell.text = ""
-    p = cell.paragraphs[0]
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    paragraph_run(p, text, bold=bold, color=color or COLOR_TEXT, size=size)
-
-
-def add_styled_table(doc: Document, rows):
-    if not rows:
-        return
-
-    max_cols = max(len(r) for r in rows)
-    table = doc.add_table(rows=len(rows), cols=max_cols)
-    table.style = "Table Grid"
-
-    headers = [c.lower() for c in rows[0]]
-    is_pro_contra = len(rows[0]) == 2 and any("pro" in h for h in headers) and any("contra" in h for h in headers)
-    is_radar = "theme" in headers[0] and "primary etf" in " ".join(headers)
-    is_tracking = "ticker" in headers[0] and ("shares" in " ".join(headers) or "previous weight %" in " ".join(headers))
-
-    for r_idx, row in enumerate(rows):
-        for c_idx in range(max_cols):
-            value = row[c_idx] if c_idx < len(row) else ""
-            cell = table.cell(r_idx, c_idx)
-            if r_idx == 0:
-                set_cell_text(cell, value, bold=True)
-                if is_pro_contra and c_idx == 0:
-                    set_cell_shading(cell, PRO_HEADER_FILL)
-                elif is_pro_contra and c_idx == 1:
-                    set_cell_shading(cell, CONTRA_HEADER_FILL)
-                elif is_radar:
-                    set_cell_shading(cell, RADAR_FILL)
-                elif is_tracking:
-                    set_cell_shading(cell, TRACKING_FILL)
-                else:
-                    set_cell_shading(cell, TABLE_HEADER_FILL)
-            else:
-                set_cell_text(cell, value, color=color_for_term(value))
-                if not (is_pro_contra or is_radar or is_tracking) and r_idx % 2 == 0:
-                    set_cell_shading(cell, TABLE_ALT_FILL)
-
-    doc.add_paragraph("")
-
-
-PLAIN_SUBHEADERS = {
-    "Assessment",
-    "Prospective score",
-    "Theme",
-    "Why it fits now",
-    "Why this beats current alternatives",
-    "Technical analysis",
-    "Second-order opportunity / threat map",
-    "Replacement logic",
-    "Why now rather than later",
-    "Scorecard",
-    "Macro invalidators",
-    "Market-based invalidators",
-    "Geopolitical invalidators",
-    "Second-order invalidators",
-    "Portfolio construction risks",
-    "Top 3 actions this week",
-    "Top 3 risks this week",
-    "Best structural opportunities not yet actionable",
-}
-
-
-def build_docx_from_markdown(md_text: str, output_path: Path, equity_curve_path: Path = None):
-    doc = Document()
-    set_document_layout(doc)
-
-    lines = md_text.splitlines()
-    i = 0
-
-    while i < len(lines):
-        line = lines[i].rstrip()
-        stripped = line.strip()
-
-        if not stripped:
-            doc.add_paragraph("")
-            i += 1
-            continue
-
-        if line.startswith("# "):
-            add_heading(doc, clean_md_inline(line[2:]), 0)
-            i += 1
-            continue
-
-        if stripped.startswith("> **Note**") or stripped.startswith("> *This report is for informational and educational purposes only"):
-            note_text = ""
-            if stripped.startswith("> **Note**"):
-                if i + 1 < len(lines) and lines[i + 1].strip().startswith(">"):
-                    note_text = clean_md_inline(lines[i + 1].strip().lstrip(">").strip())
-                    i += 1
-                else:
-                    note_text = "This report is for informational and educational purposes only; please see the disclaimer at the end."
-            else:
-                note_text = clean_md_inline(stripped.lstrip(">").strip())
-            add_note_callout(doc, note_text)
-            i += 1
-            continue
-
+    for line in lines:
+        stripped = clean_md_inline(line.strip())
         if stripped == "EQUITY_CURVE_CHART_PLACEHOLDER":
-            if equity_curve_path and equity_curve_path.exists():
-                p = doc.add_paragraph()
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                doc.add_picture(str(equity_curve_path), width=Inches(8.6))
-                doc.add_paragraph("")
-            i += 1
+            if image_src:
+                processed.append(f"![Equity curve]({image_src})")
+            else:
+                processed.append("_Equity curve chart unavailable for this delivery._")
             continue
 
-        if is_markdown_link_line(stripped):
-            m = re.match(r"^\[(.*?)\]\((https?://.*?)\)$", stripped)
-            if m:
-                p = doc.add_paragraph()
-                add_hyperlink(p, clean_md_inline(m.group(1)), m.group(2))
-            i += 1
-            continue
+        is_heading = line.lstrip().startswith("#")
+        is_bullet = line.lstrip().startswith("- ") or bool(re.match(r"^\d+\.\s+", line.lstrip()))
+        is_table = is_markdown_table_line(line)
 
-        if i + 1 < len(lines) and is_markdown_table_line(lines[i]) and is_markdown_separator_line(lines[i + 1]):
-            table_lines = [lines[i], lines[i + 1]]
-            i += 2
-            while i < len(lines) and is_markdown_table_line(lines[i]):
-                table_lines.append(lines[i])
-                i += 1
-            add_styled_table(doc, parse_markdown_table(table_lines))
-            continue
+        if stripped in PLAIN_SUBHEADERS and not is_heading and not is_bullet and not is_table:
+            processed.append(f"#### {stripped}")
+        else:
+            processed.append(line)
 
-        if line.startswith("## "):
-            add_heading(doc, clean_md_inline(line[3:]), 1)
-            i += 1
-            continue
-
-        if line.startswith("### "):
-            add_heading(doc, clean_md_inline(line[4:]), 2)
-            i += 1
-            continue
-
-        cleaned = clean_md_inline(line)
-
-        if cleaned in PLAIN_SUBHEADERS:
-            p = doc.add_paragraph()
-            paragraph_run(p, cleaned, bold=True, color=COLOR_LABEL, size=11.5)
-            i += 1
-            continue
-
-        if cleaned.startswith("- "):
-            p = doc.add_paragraph(style="List Bullet")
-            paragraph_run(p, cleaned[2:], color=color_for_term(cleaned[2:]))
-            i += 1
-            continue
-
-        if re.match(r"^\d+\.\s+", cleaned):
-            p = doc.add_paragraph(style="List Number")
-            paragraph_run(p, re.sub(r"^\d+\.\s+", "", cleaned))
-            i += 1
-            continue
-
-        p = doc.add_paragraph()
-        paragraph_run(p, cleaned, color=color_for_term(cleaned))
-        i += 1
-
-    doc.save(output_path)
+    return "\n".join(processed)
 
 
-# ---------- HTML BODY ----------
-def esc(text: str) -> str:
-    text = clean_md_inline(text)
+def render_markdown_block(text: str, image_src: str | None = None) -> str:
+    md = preprocess_markdown_block(strip_citations(text), image_src=image_src)
+    return MARKDOWN(md)
+
+
+def chip_html(text: str, bg: str, fg: str) -> str:
+    return f"<span class='chip' style='background:{bg};color:{fg};'>{esc(text)}</span>"
+
+
+def action_tone(header: str):
+    label = clean_md_inline(header).lower()
+    if "add" in label:
+        return BRAND["add_bg"], BRAND["add_tx"]
+    if "hold but replaceable" in label:
+        return BRAND["replace_bg"], BRAND["replace_tx"]
+    if "hold" in label:
+        return BRAND["hold_bg"], BRAND["hold_tx"]
+    if "reduce" in label:
+        return BRAND["reduce_bg"], BRAND["reduce_tx"]
+    if "close" in label:
+        return BRAND["close_bg"], BRAND["close_tx"]
+    return BRAND["champagne_soft"], BRAND["ink"]
+
+
+def section_header_html(number: int, title: str) -> str:
     return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
+        f"<div class='section-kicker'>"
+        f"<span class='section-badge'>{number}</span>"
+        f"<span class='section-label'>{esc(title)}</span>"
+        f"</div>"
     )
 
 
-def render_chip(text: str, bg: str, fg: str = "#1F4E79") -> str:
-    return f"<span style='display:inline-block;padding:4px 8px;border-radius:999px;background:{bg};color:{fg};font-size:12px;font-weight:700;margin:0 6px 6px 0;'>{esc(text)}</span>"
+def render_executive_summary(section: dict) -> str:
+    pairs = extract_label_pairs(section["lines"])
+    if not pairs:
+        body = render_markdown_block("\n".join(section["lines"]))
+        return f"<div class='panel panel-exec'>{section_header_html(section['number'], section['title'])}{body}</div>"
+
+    pair_map = OrderedDict(pairs)
+    chips = []
+    for key in ["Primary regime", "Secondary cross-current", "Geopolitical regime"]:
+        value = pair_map.get(key)
+        if value:
+            chips.append(chip_html(f"{key}: {value}", BRAND["champagne_soft"], BRAND["ink"]))
+
+    body_parts = []
+    for key, value in pairs:
+        if key in {"Primary regime", "Secondary cross-current", "Geopolitical regime"}:
+            continue
+        if key.lower() == "main takeaway":
+            body_parts.append(
+                f"<div class='takeaway'><div class='takeaway-label'>{esc(key)}</div><div class='takeaway-text'>{esc(value)}</div></div>"
+            )
+        else:
+            body_parts.append(
+                f"<div class='summary-line'><div class='summary-key'>{esc(key)}</div><div class='summary-value'>{esc(value)}</div></div>"
+            )
+
+    return (
+        f"<div class='panel panel-exec'>"
+        f"{section_header_html(section['number'], section['title'])}"
+        f"<h2 class='panel-title'>A premium first page should answer three questions in seconds.</h2>"
+        f"<div class='chip-row'>{''.join(chips)}</div>"
+        f"{''.join(body_parts)}"
+        f"</div>"
+    )
 
 
-def render_action_snapshot(lines):
-    blocks = []
+def render_action_snapshot(section: dict) -> str:
+    groups = []
     current_header = None
     current_items = []
 
     def flush():
-        nonlocal current_header, current_items, blocks
+        nonlocal current_header, current_items
         if not current_header:
             return
-        color = "#1F4E79"
-        if "Add" in current_header:
-            color = "#008000"
-        elif "Hold but replaceable" in current_header:
-            color = "#C08000"
-        elif "Hold" in current_header:
-            color = "#008000"
-        elif "Reduce" in current_header:
-            color = "#C08000"
-        elif "Close" in current_header:
-            color = "#C00000"
-        items_html = "".join(f"<li style='margin:0 0 4px 0;'>{esc(x)}</li>" for x in current_items)
-        blocks.append(
-            f"<div style='margin:0 0 14px 0;'><div style='font-weight:700;color:{color};margin-bottom:6px;font-size:15px;'>{esc(current_header)}</div><ul style='margin:0 0 0 18px;padding:0;line-height:1.5;'>{items_html}</ul></div>"
+        bg, fg = action_tone(current_header)
+        items_html = "".join(f"<li>{esc(item)}</li>" for item in current_items) or "<li>No change</li>"
+        groups.append(
+            f"<div class='snapshot-group'>"
+            f"{chip_html(current_header, bg, fg)}"
+            f"<ul>{items_html}</ul>"
+            f"</div>"
         )
 
-    for line in lines:
-        s = line.strip()
-        if not s or re.match(r"^##\s+\d+\.", s):
+    for line in section["lines"]:
+        stripped = line.strip()
+        if not stripped:
             continue
-        if s.startswith("### "):
+        if stripped.startswith("### "):
             flush()
-            current_header = clean_md_inline(s[4:])
+            current_header = clean_md_inline(stripped[4:])
             current_items = []
-        elif s.startswith("- "):
-            current_items.append(s[2:])
-        elif re.match(r"^\d+\.\s+", s):
-            current_items.append(re.sub(r"^\d+\.\s+", "", s))
-    flush()
-    return "".join(blocks)
-
-
-def render_summary_pairs(lines):
-    pairs = extract_label_pairs(lines)
-    chips = []
-    body = []
-    for k, v in pairs:
-        if k in {"Primary regime", "Secondary cross-current", "Geopolitical regime"}:
-            chips.append(render_chip(f"{k}: {v}", "#EEF4FF"))
+        elif stripped.startswith("- "):
+            current_items.append(stripped[2:])
+        elif re.match(r"^\d+\.\s+", stripped):
+            current_items.append(re.sub(r"^\d+\.\s+", "", stripped))
         else:
-            body.append(f"<div style='margin:0 0 8px 0; line-height:1.5;'><strong>{esc(k)}:</strong> {esc(v)}</div>")
-    return "".join(chips), "".join(body)
+            if current_header and clean_md_inline(stripped):
+                current_items.append(clean_md_inline(stripped))
+    flush()
 
-
-def render_html_table(rows, title, header_fill="#FFF4E5"):
-    if not rows or len(rows) < 2:
-        return ""
-    headers = rows[0]
-    body = rows[1:]
-    thead = "".join(
-        f"<th style='text-align:left;padding:8px 10px;border-bottom:1px solid #d9e2f0;background:{header_fill};font-size:13px;'>{esc(h)}</th>"
-        for h in headers
+    return (
+        f"<div class='panel panel-snapshot'>"
+        f"{section_header_html(section['number'], section['title'])}"
+        f"<h2 class='panel-title'>Suggested visual treatment</h2>"
+        f"{''.join(groups)}"
+        f"</div>"
     )
-    body_html = ""
-    for idx, row in enumerate(body):
-        cells = "".join(
-            f"<td style='padding:8px 10px;border-bottom:1px solid #eef2f7;font-size:13px;vertical-align:top;'>{esc(c)}</td>"
-            for c in row
-        )
-        bg = "#ffffff" if idx % 2 == 0 else "#fafcff"
-        body_html += f"<tr style='background:{bg};'>{cells}</tr>"
-    return f"""
-    <div style="margin:18px 0 0 0;">
-      <div style="font-size:17px;font-weight:700;color:#2F5597;margin-bottom:8px;">{esc(title)}</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #e3eaf5;">
-        <thead><tr>{thead}</tr></thead>
-        <tbody>{body_html}</tbody>
-      </table>
-    </div>
+
+
+def render_risks(section: dict) -> str:
+    body = render_markdown_block("\n".join(section["lines"]))
+    return (
+        f"<div class='panel panel-risks'>"
+        f"{section_header_html(section['number'], section['title'])}"
+        f"<h2 class='panel-title'>Risk block should read like a premium alert</h2>"
+        f"{body}"
+        f"</div>"
+    )
+
+
+def render_standard_panel(section: dict, image_src: str | None = None, extra_class: str = "") -> str:
+    body = render_markdown_block("\n".join(section["lines"]), image_src=image_src)
+    return (
+        f"<div class='panel {extra_class}'>"
+        f"{section_header_html(section['number'], section['title'])}"
+        f"<h2 class='panel-title'>{esc(section['title'])}</h2>"
+        f"{body}"
+        f"</div>"
+    )
+
+
+def build_report_html(md_text: str, report_date_str: str, image_src: str | None = None) -> str:
+    report_title, sections = extract_sections(md_text)
+
+    sections_by_number = {s["number"]: s for s in sections}
+    exec_pairs = OrderedDict(extract_label_pairs(sections_by_number.get(1, {}).get("lines", [])))
+    primary_regime = exec_pairs.get("Primary regime", "Pending classification")
+    geo_regime = exec_pairs.get("Geopolitical regime", "Pending classification")
+
+    intro_cards = (
+        f"<div class='mini-card'><div class='mini-label'>Primary regime</div><div class='mini-value'>{esc(primary_regime)}</div></div>"
+        f"<div class='mini-card'><div class='mini-label'>Geopolitical regime</div><div class='mini-value'>{esc(geo_regime)}</div></div>"
+        f"<div class='mini-card'><div class='mini-label'>Attachment format</div><div class='mini-value'>PDF attachment</div></div>"
+    )
+
+    client_grid = []
+    if 1 in sections_by_number:
+        client_grid.append(render_executive_summary(sections_by_number[1]))
+    if 2 in sections_by_number:
+        client_grid.append(render_action_snapshot(sections_by_number[2]))
+    if 5 in sections_by_number:
+        client_grid.append(render_risks(sections_by_number[5]))
+
+    rest_panels = []
+    for number in [3, 4, 6]:
+        if number in sections_by_number:
+            rest_panels.append(render_standard_panel(sections_by_number[number]))
+    for number in range(7, 18):
+        if number in sections_by_number:
+            img_src = image_src if number == 7 else None
+            rest_panels.append(render_standard_panel(sections_by_number[number], image_src=img_src))
+
+    css = f"""
+    @page {{
+      size: A4 landscape;
+      margin: 14mm;
+    }}
+    * {{
+      box-sizing: border-box;
+    }}
+    body {{
+      margin: 0;
+      padding: 0;
+      background: {BRAND['paper']};
+      color: {BRAND['ink']};
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }}
+    .report-shell {{
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 0 0 12px 0;
+    }}
+    .hero {{
+      background: {BRAND['header']};
+      color: {BRAND['header_text']};
+      padding: 24px 28px 20px 28px;
+      border-radius: 14px 14px 0 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+    }}
+    .masthead {{
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 700;
+      font-size: 28px;
+      letter-spacing: 1px;
+      margin: 0 0 8px 0;
+      text-transform: uppercase;
+    }}
+    .hero-sub {{
+      font-size: 14px;
+      color: #EFF4F6;
+      margin: 0;
+    }}
+    .hero-meta {{
+      min-width: 220px;
+      text-align: right;
+    }}
+    .hero-date {{
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+    }}
+    .hero-edition {{
+      font-size: 13px;
+      margin: 0 0 12px 0;
+      color: #EFF4F6;
+    }}
+    .hero-rule {{
+      height: 6px;
+      background: {BRAND['champagne']};
+      margin: 8px 0 18px 0;
+      border-radius: 999px;
+    }}
+    .notice {{
+      background: #F2F0EB;
+      border: 1px solid {BRAND['border']};
+      color: {BRAND['muted']};
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 14px;
+      margin: 0 0 18px 0;
+    }}
+    .summary-strip {{
+      display: flex;
+      gap: 16px;
+      margin: 0 0 18px 0;
+    }}
+    .mini-card {{
+      flex: 1 1 0;
+      background: {BRAND['surface']};
+      border: 1px solid {BRAND['border']};
+      border-radius: 18px;
+      padding: 14px 18px;
+    }}
+    .mini-label {{
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: {BRAND['muted']};
+      margin: 0 0 8px 0;
+    }}
+    .mini-value {{
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 700;
+      font-size: 22px;
+      color: {BRAND['ink']};
+      line-height: 1.18;
+    }}
+    .client-grid {{
+      display: grid;
+      grid-template-columns: 1.7fr 1fr;
+      gap: 18px;
+      align-items: start;
+      margin: 0 0 18px 0;
+    }}
+    .panel {{
+      background: {BRAND['surface']};
+      border: 1px solid {BRAND['border']};
+      border-radius: 18px;
+      padding: 20px 22px 20px 22px;
+      margin: 0 0 18px 0;
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }}
+    .panel-exec {{
+      grid-row: span 2;
+      min-height: 100%;
+    }}
+    .panel-title {{
+      margin: 0 0 14px 0;
+      color: {BRAND['ink']};
+      font-size: 20px;
+      line-height: 1.25;
+      font-weight: 700;
+    }}
+    .section-kicker {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 14px 0;
+    }}
+    .section-badge {{
+      width: 34px;
+      height: 34px;
+      line-height: 34px;
+      text-align: center;
+      border-radius: 999px;
+      background: #2A5384;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 15px;
+      flex: 0 0 auto;
+    }}
+    .section-label {{
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: {BRAND['muted']};
+    }}
+    .chip-row {{
+      margin: 0 0 14px 0;
+    }}
+    .chip {{
+      display: inline-block;
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin: 0 8px 8px 0;
+    }}
+    .summary-line {{
+      margin: 0 0 12px 0;
+      padding: 0 0 12px 0;
+      border-bottom: 1px solid {BRAND['border']};
+    }}
+    .summary-key {{
+      color: {BRAND['muted']};
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin: 0 0 6px 0;
+    }}
+    .summary-value {{
+      color: {BRAND['ink']};
+      font-size: 15px;
+      line-height: 1.52;
+    }}
+    .takeaway {{
+      margin: 18px 0 0 0;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #F1EADF;
+      border: 1px solid #E6D8C0;
+    }}
+    .takeaway-label {{
+      color: {BRAND['muted']};
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin: 0 0 6px 0;
+    }}
+    .takeaway-text {{
+      color: {BRAND['ink']};
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.4;
+    }}
+    .snapshot-group {{
+      margin: 0 0 14px 0;
+    }}
+    .snapshot-group ul {{
+      margin: 10px 0 0 22px;
+      padding: 0;
+    }}
+    .snapshot-group li {{
+      margin: 0 0 6px 0;
+      line-height: 1.45;
+      font-size: 14px;
+    }}
+    .panel p, .panel li {{
+      font-size: 14px;
+      line-height: 1.55;
+      margin-top: 0;
+    }}
+    .panel ul, .panel ol {{
+      margin-top: 0;
+      padding-left: 22px;
+    }}
+    .panel h3 {{
+      color: {BRAND['ink']};
+      font-size: 15px;
+      margin: 16px 0 8px 0;
+    }}
+    .panel h4 {{
+      color: {BRAND['muted']};
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin: 16px 0 8px 0;
+    }}
+    .panel blockquote {{
+      margin: 12px 0;
+      padding: 10px 12px;
+      border-left: 4px solid {BRAND['champagne']};
+      background: #F4F0E8;
+      color: {BRAND['muted']};
+    }}
+    .panel table {{
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin: 14px 0 12px 0;
+      border: 1px solid {BRAND['border']};
+      font-size: 12px;
+    }}
+    .panel th {{
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid {BRAND['border']};
+      background: #F2EBDD;
+      color: {BRAND['ink']};
+      vertical-align: middle;
+    }}
+    .panel td {{
+      padding: 8px 10px;
+      border-bottom: 1px solid #ECE6DE;
+      vertical-align: top;
+      word-wrap: break-word;
+    }}
+    .panel tr:nth-child(even) td {{
+      background: #FEFCF9;
+    }}
+    .panel img {{
+      max-width: 100%;
+      height: auto;
+      border: 1px solid {BRAND['border']};
+      border-radius: 10px;
+      margin: 10px 0 4px 0;
+      display: block;
+    }}
+    .report-stack {{
+      margin-top: 0;
+    }}
+    .footer-note {{
+      color: {BRAND['muted']};
+      font-size: 12px;
+      margin-top: 6px;
+    }}
+    a {{
+      color: #315F8B;
+      text-decoration: underline;
+    }}
+    @media screen and (max-width: 1100px) {{
+      .hero, .summary-strip, .client-grid {{
+        display: block;
+      }}
+      .hero-meta {{
+        text-align: left;
+        margin-top: 16px;
+      }}
+      .mini-card, .panel {{
+        margin-bottom: 16px;
+      }}
+    }}
     """
 
-
-
-def build_email_body_html(md_text: str, report_date_str: str, inline_equity_cid: str = None) -> str:
-    md_for_html = md_text
-    if inline_equity_cid and "EQUITY_CURVE_CHART_PLACEHOLDER" in md_for_html:
-        md_for_html = md_for_html.replace(
-            "EQUITY_CURVE_CHART_PLACEHOLDER",
-            f"![Equity curve](cid:{inline_equity_cid})"
-        )
-    else:
-        md_for_html = md_for_html.replace(
-            "EQUITY_CURVE_CHART_PLACEHOLDER",
-            "_Equity curve chart attached separately when available._"
-        )
-
-    renderer = mistune.create_markdown(plugins=["table"])
-    rendered = renderer(md_for_html)
-
-    css = """
-    body { margin: 0; padding: 0; background: #f6f8fb; font-family: Calibri, Arial, sans-serif; color: #282828; }
-    .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px; }
-    .card { background: #ffffff; border: 1px solid #d9e2f0; border-radius: 12px; padding: 28px 32px; }
-    h1 { color: #2F5597; font-size: 28px; margin: 0 0 12px 0; }
-    h2 { color: #2F5597; font-size: 21px; margin: 24px 0 10px 0; border-top: 1px solid #eef2f7; padding-top: 18px; }
-    h3 { color: #1F4E79; font-size: 16px; margin: 18px 0 8px 0; }
-    p, li { font-size: 14px; line-height: 1.55; }
-    blockquote { margin: 0 0 18px 0; padding: 10px 12px; background: #f3f4f6; border-left: 4px solid #d9e2f0; color: #555555; }
-    table { width: 100%; border-collapse: collapse; margin: 14px 0 18px 0; }
-    th { text-align: left; padding: 8px 10px; border-bottom: 1px solid #d9e2f0; background: #d9eaf7; font-size: 13px; }
-    td { padding: 8px 10px; border-bottom: 1px solid #eef2f7; font-size: 13px; vertical-align: top; }
-    tr:nth-child(even) td { background: #fafcff; }
-    code { background: #f3f4f6; padding: 1px 4px; border-radius: 4px; }
-    img { max-width: 100%; height: auto; border: 1px solid #d9e2f0; border-radius: 8px; margin: 10px 0 18px 0; }
-    """
-
-    return f"""
+    html = f"""
     <html>
       <head>
         <meta charset="utf-8" />
         <style>{css}</style>
       </head>
       <body>
-        <div class="wrap">
-          <div class="card">
-            {rendered}
+        <div class="report-shell">
+          <div class="hero">
+            <div>
+              <div class="masthead">WEEKLY ETF REVIEW</div>
+              <p class="hero-sub">{esc(report_title or f"Weekly Report Review {report_date_str}")}</p>
+            </div>
+            <div class="hero-meta">
+              <div class="hero-date">{esc(report_date_str)}</div>
+              <div class="hero-edition">Weekly Allocation Review</div>
+              <div class="hero-edition">Client edition</div>
+            </div>
           </div>
+          <div class="hero-rule"></div>
+          <div class="notice">{esc(DISCLAIMER_LINE)}</div>
+          <div class="summary-strip">{intro_cards}</div>
+          <div class="client-grid">{''.join(client_grid)}</div>
+          <div class="report-stack">{''.join(rest_panels)}</div>
+          <div class="footer-note">Premium PDF / HTML delivery format - consistent masthead, palette, hierarchy, and table treatment.</div>
         </div>
       </body>
     </html>
-    """.strip()
+    """
+    return html.strip()
 
 
-# ---------- MAIN ----------
-def main():
-    output_dir = Path("output")
-    latest_report = latest_report_file(output_dir)
-    original_md_text = latest_report.read_text(encoding="utf-8")
+def create_pdf_from_html(html: str, output_path: Path) -> None:
+    HTML(string=html, base_url=str(output_path.parent)).write_pdf(str(output_path))
+
+
+# ---------- DELIVERY ASSETS ----------
+def generate_delivery_assets(output_dir: Path, report_path: Path):
+    original_md_text = report_path.read_text(encoding="utf-8")
     md_text_clean = strip_citations(original_md_text)
+    validate_required_report(md_text_clean)
 
     report_date_str = parse_report_date(md_text_clean)
-    safe_stem = latest_report.stem
+    safe_stem = report_path.stem
 
-    clean_md_path = latest_report.with_name(f"{safe_stem}_clean.md")
+    clean_md_path = report_path.with_name(f"{safe_stem}_clean.md")
     clean_md_path.write_text(md_text_clean, encoding="utf-8")
 
-    equity_curve_png = latest_report.with_name(f"{safe_stem}_equity_curve.png")
+    equity_curve_png = report_path.with_name(f"{safe_stem}_equity_curve.png")
     create_equity_curve_png(output_dir, equity_curve_png)
 
-    docx_path = latest_report.with_name(f"{safe_stem}.docx")
-    build_docx_from_markdown(md_text_clean, docx_path, equity_curve_png if equity_curve_png.exists() else None)
+    image_src_pdf = equity_curve_png.resolve().as_uri() if equity_curve_png.exists() else None
+    image_src_email = "cid:equitycurve" if equity_curve_png.exists() else None
 
-    subject = f"Weekly Report Review {report_date_str}"
-    inline_equity_cid = "equitycurve"
-    html_body = build_email_body_html(md_text_clean, report_date_str, inline_equity_cid if equity_curve_png.exists() else None)
+    html_email = build_report_html(md_text_clean, report_date_str, image_src=image_src_email)
+    html_pdf = build_report_html(md_text_clean, report_date_str, image_src=image_src_pdf)
 
-    validate_required_report(md_text_clean)
-    validate_email_body(html_body, md_text_clean)
+    validate_email_body(html_email, md_text_clean)
+
+    html_path = report_path.with_name(f"{safe_stem}_delivery.html")
+    html_path.write_text(html_pdf, encoding="utf-8")
+
+    pdf_path = report_path.with_name(f"{safe_stem}.pdf")
+    create_pdf_from_html(html_pdf, pdf_path)
+
+    if not pdf_path.exists() or pdf_path.stat().st_size <= 0:
+        raise RuntimeError(f"PDF attachment was not created correctly: {pdf_path}")
+
+    return {
+        "report_date_str": report_date_str,
+        "clean_md_path": clean_md_path,
+        "equity_curve_png": equity_curve_png,
+        "html_path": html_path,
+        "pdf_path": pdf_path,
+        "html_email": html_email,
+        "safe_stem": safe_stem,
+        "md_text_clean": md_text_clean,
+    }
+
+
+# ---------- EMAIL ----------
+def send_email_with_attachments(assets: dict) -> tuple[list[str], Path, str]:
+    subject = f"Weekly Report Review {assets['report_date_str']}"
 
     smtp_host = require_env("MRKT_RPRTS_SMTP_HOST")
     smtp_port = int(os.environ.get("MRKT_RPRTS_SMTP_PORT") or "587")
     smtp_user = require_env("MRKT_RPRTS_SMTP_USER")
     smtp_pass = require_env("MRKT_RPRTS_SMTP_PASS")
     mail_from = require_env("MRKT_RPRTS_MAIL_FROM")
+
     mail_to_env = os.environ.get("MRKT_RPRTS_MAIL_TO", REQUIRED_MAIL_TO).strip()
     if mail_to_env != REQUIRED_MAIL_TO:
         raise RuntimeError(f"Recipient mismatch: expected {REQUIRED_MAIL_TO}, got {mail_to_env}")
     mail_to = REQUIRED_MAIL_TO
 
-    if not docx_path.exists():
-        raise RuntimeError(f"DOCX attachment was not created: {docx_path}")
-    if docx_path.stat().st_size <= 0:
-        raise RuntimeError(f"DOCX attachment is empty: {docx_path}")
+    root = MIMEMultipart("mixed")
+    root["Subject"] = subject
+    root["From"] = mail_from
+    root["To"] = mail_to
 
-    msg = MIMEMultipart()
-    msg["Subject"] = subject
-    msg["From"] = mail_from
-    msg["To"] = mail_to
+    related = MIMEMultipart("related")
+    alternative = MIMEMultipart("alternative")
+    alternative.attach(MIMEText(assets["html_email"], "html", "utf-8"))
+    related.attach(alternative)
 
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
+    attachments = [assets["pdf_path"].name, assets["clean_md_path"].name, assets["html_path"].name]
 
-    attachments = [docx_path.name, clean_md_path.name]
-
-    with open(docx_path, "rb") as f:
-        attachment = MIMEApplication(
-            f.read(),
-            _subtype="vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-        attachment.add_header(
-            "Content-Disposition",
-            "attachment",
-            filename=docx_path.name,
-        )
-        msg.attach(attachment)
-
-    with open(clean_md_path, "rb") as f:
-        md_attachment = MIMEApplication(f.read(), _subtype="markdown")
-        md_attachment.add_header(
-            "Content-Disposition",
-            "attachment",
-            filename=clean_md_path.name,
-        )
-        msg.attach(md_attachment)
-
-    if equity_curve_png.exists():
-        with open(equity_curve_png, "rb") as f:
-            png_bytes = f.read()
+    if assets["equity_curve_png"].exists():
+        png_bytes = assets["equity_curve_png"].read_bytes()
 
         inline_png = MIMEImage(png_bytes, _subtype="png")
         inline_png.add_header("Content-ID", "<equitycurve>")
-        inline_png.add_header("Content-Disposition", "inline", filename=equity_curve_png.name)
-        msg.attach(inline_png)
+        inline_png.add_header("Content-Disposition", "inline", filename=assets["equity_curve_png"].name)
+        related.attach(inline_png)
 
         png_attachment = MIMEApplication(png_bytes, _subtype="png")
-        png_attachment.add_header(
-            "Content-Disposition",
-            "attachment",
-            filename=equity_curve_png.name,
-        )
-        msg.attach(png_attachment)
-        attachments.append(equity_curve_png.name)
+        png_attachment.add_header("Content-Disposition", "attachment", filename=assets["equity_curve_png"].name)
+        root.attach(png_attachment)
+        attachments.append(assets["equity_curve_png"].name)
+
+    root.attach(related)
+
+    with open(assets["pdf_path"], "rb") as f:
+        pdf_attachment = MIMEApplication(f.read(), _subtype="pdf")
+        pdf_attachment.add_header("Content-Disposition", "attachment", filename=assets["pdf_path"].name)
+        root.attach(pdf_attachment)
+
+    with open(assets["clean_md_path"], "rb") as f:
+        md_attachment = MIMEApplication(f.read(), _subtype="markdown")
+        md_attachment.add_header("Content-Disposition", "attachment", filename=assets["clean_md_path"].name)
+        root.attach(md_attachment)
+
+    with open(assets["html_path"], "rb") as f:
+        html_attachment = MIMEApplication(f.read(), _subtype="html")
+        html_attachment.add_header("Content-Disposition", "attachment", filename=assets["html_path"].name)
+        root.attach(html_attachment)
 
     with smtplib.SMTP(smtp_host, smtp_port) as server:
         server.starttls()
         server.login(smtp_user, smtp_pass)
-        server.sendmail(mail_from, [mail_to], msg.as_string())
+        server.sendmail(mail_from, [mail_to], root.as_string())
 
-    manifest_path = latest_report.with_name(f"{safe_stem}_delivery_manifest.txt")
-    write_delivery_manifest(manifest_path, latest_report.name, mail_to, attachments)
+    manifest_path = assets["pdf_path"].with_name(f"{assets['safe_stem']}_delivery_manifest.txt")
+    write_delivery_manifest(manifest_path, assets["pdf_path"].name.replace(".pdf", ".md"), mail_to, attachments)
+    return attachments, manifest_path, mail_to
+
+
+# ---------- MAIN ----------
+def main():
+    output_dir = Path("output")
+    latest_report = latest_report_file(output_dir)
+    assets = generate_delivery_assets(output_dir, latest_report)
+    attachments, manifest_path, mail_to = send_email_with_attachments(assets)
 
     receipt = (
         f"DELIVERY_OK | report={latest_report.name} | recipient={mail_to} | "
-        f"html_body=full_report | docx_attached=yes | manifest={manifest_path.name} | "
+        f"html_body=full_report | pdf_attached=yes | manifest={manifest_path.name} | "
         f"attachments={', '.join(attachments)}"
     )
     print(receipt)
