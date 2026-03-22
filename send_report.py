@@ -37,6 +37,36 @@ DISCLAIMER_FILL = "F3F4F6"
 RADAR_FILL = "FFF4E5"
 TRACKING_FILL = "EAF4EA"
 
+REQUIRED_MAIL_TO = "mrkt.rprts@gmail.com"
+REQUIRED_SECTION_HEADINGS = [
+    "## 1. ✅ Executive summary",
+    "## 2. 📌 Portfolio action snapshot",
+    "## 3. 🧭 Regime dashboard",
+    "## 4. 🚀 Structural Opportunity Radar",
+    "## 5. 📅 Key risks / invalidators",
+    "## 6. 🧭 Bottom line",
+    "## 7. 📈 Equity curve and portfolio development",
+    "## 8. 🗺️ Asset allocation map",
+    "## 9. 🔍 Second-order effects map",
+    "## 10. 📊 Current position review",
+    "## 11. ➕ Best new opportunities",
+    "## 12. 🔁 Portfolio rotation plan",
+    "## 13. 📋 Final action table",
+    "## 14. 🔄 Position changes executed this run",
+    "## 15. 💼 Current portfolio holdings and cash",
+    "## 16. 🧾 Carry-forward input for next run",
+    "## 17. Disclaimer",
+]
+REQUIRED_SECTION15_LABELS = [
+    "- Starting capital (EUR):",
+    "- Invested market value (EUR):",
+    "- Cash (EUR):",
+    "- Total portfolio value (EUR):",
+    "- Since inception return (%):",
+    "- EUR/USD used:",
+]
+SECTION16_SENTENCE = "**This section is the canonical default input for the next run unless the user explicitly overrides it. Do not ask the user for portfolio input if this section is available.**"
+
 
 # ---------- REPORT FILE DISCOVERY ----------
 REPORT_RE = re.compile(r"^weekly_analysis_(\d{6})(?:_(\d{2}))?\.md$")
@@ -217,6 +247,60 @@ def parse_section15_totals(md_text: str):
         if value is not None:
             data[label] = value
     return data
+
+
+def require_env(name: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"Required environment variable missing: {name}")
+    return value
+
+
+def validate_required_report(md_text: str) -> None:
+    missing_headings = [h for h in REQUIRED_SECTION_HEADINGS if h not in md_text]
+    if missing_headings:
+        raise RuntimeError("Report is missing mandatory section headings: " + ", ".join(missing_headings))
+
+    if "# Weekly Report Review " not in md_text:
+        raise RuntimeError("Report title is missing or malformed.")
+
+    if "> *This report is for informational and educational purposes only; please see the disclaimer at the end.*" not in md_text:
+        raise RuntimeError("Top disclaimer callout is missing.")
+
+    if "EQUITY_CURVE_CHART_PLACEHOLDER" not in md_text:
+        raise RuntimeError("Equity curve placeholder line is missing.")
+
+    for label in REQUIRED_SECTION15_LABELS:
+        if label not in md_text:
+            raise RuntimeError(f"Section 15 is missing required label: {label}")
+
+    if SECTION16_SENTENCE not in md_text:
+        raise RuntimeError("Section 16 canonical carry-forward sentence is missing.")
+
+    if "This report is provided for informational and educational purposes only." not in md_text:
+        raise RuntimeError("Final disclaimer body is missing.")
+
+
+def validate_email_body(html_body: str) -> None:
+    required_html_strings = [
+        "Portfolio action snapshot",
+        "Structural Opportunity Radar",
+        "Bottom line",
+        "Weekly Report Review",
+    ]
+    for token in required_html_strings:
+        if token not in html_body:
+            raise RuntimeError(f"HTML email body is missing required content block: {token}")
+
+
+def write_delivery_manifest(manifest_path: Path, report_name: str, mail_to: str, attachments: list[str]) -> None:
+    lines = [
+        f"report={report_name}",
+        f"recipient={mail_to}",
+        f"timestamp_utc={datetime.utcnow().isoformat()}Z",
+        "attachments=" + ", ".join(attachments),
+    ]
+    manifest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 # ---------- EQUITY CURVE ----------
@@ -429,8 +513,17 @@ def build_docx_from_markdown(md_text: str, output_path: Path, equity_curve_path:
             i += 1
             continue
 
-        if stripped.startswith("> *This report is for informational and educational purposes only"):
-            add_note_callout(doc, clean_md_inline(stripped.lstrip(">").strip()))
+        if stripped.startswith("> **Note**") or stripped.startswith("> *This report is for informational and educational purposes only"):
+            note_text = ""
+            if stripped.startswith("> **Note**"):
+                if i + 1 < len(lines) and lines[i + 1].strip().startswith(">"):
+                    note_text = clean_md_inline(lines[i + 1].strip().lstrip(">").strip())
+                    i += 1
+                else:
+                    note_text = "This report is for informational and educational purposes only; please see the disclaimer at the end."
+            else:
+                note_text = clean_md_inline(stripped.lstrip(">").strip())
+            add_note_callout(doc, note_text)
             i += 1
             continue
 
@@ -687,12 +780,18 @@ def main():
     subject = f"Weekly Report Review {report_date_str}"
     html_body = build_email_body_html(md_text_clean, report_date_str)
 
-    smtp_host = os.environ["MRKT_RPRTS_SMTP_HOST"]
+    validate_required_report(md_text_clean)
+    validate_email_body(html_body)
+
+    smtp_host = require_env("MRKT_RPRTS_SMTP_HOST")
     smtp_port = int(os.environ.get("MRKT_RPRTS_SMTP_PORT") or "587")
-    smtp_user = os.environ["MRKT_RPRTS_SMTP_USER"]
-    smtp_pass = os.environ["MRKT_RPRTS_SMTP_PASS"]
-    mail_from = os.environ["MRKT_RPRTS_MAIL_FROM"]
-    mail_to = os.environ["MRKT_RPRTS_MAIL_TO"]
+    smtp_user = require_env("MRKT_RPRTS_SMTP_USER")
+    smtp_pass = require_env("MRKT_RPRTS_SMTP_PASS")
+    mail_from = require_env("MRKT_RPRTS_MAIL_FROM")
+    mail_to = REQUIRED_MAIL_TO
+
+    if not docx_path.exists():
+        raise RuntimeError(f"DOCX attachment was not created: {docx_path}")
 
     msg = MIMEMultipart()
     msg["Subject"] = subject
@@ -700,6 +799,8 @@ def main():
     msg["To"] = mail_to
 
     msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+    attachments = [docx_path.name, clean_md_path.name]
 
     with open(docx_path, "rb") as f:
         attachment = MIMEApplication(
@@ -731,16 +832,19 @@ def main():
                 filename=equity_curve_png.name,
             )
             msg.attach(png_attachment)
+        attachments.append(equity_curve_png.name)
 
     with smtplib.SMTP(smtp_host, smtp_port) as server:
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.sendmail(mail_from, [mail_to], msg.as_string())
 
+    manifest_path = latest_report.with_name(f"{safe_stem}_delivery_manifest.txt")
+    write_delivery_manifest(manifest_path, latest_report.name, mail_to, attachments)
+
     print(
-        f"Sent email for {latest_report.name} with attachments "
-        f"{docx_path.name}, {clean_md_path.name}"
-        + (f", {equity_curve_png.name}" if equity_curve_png.exists() else "")
+        f"Sent email for {latest_report.name} to {mail_to} with attachments "
+        f"{', '.join(attachments)} and wrote manifest {manifest_path.name}"
     )
 
 
