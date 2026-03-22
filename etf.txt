@@ -34,10 +34,15 @@ Before taking any action, you must do all of the following internally:
 6. Publish the **full report in chat**.
 7. Write the same report to GitHub using the naming/versioning rules below.
 8. Run `send_report.py` or equivalent delivery logic so the newest report is sent to **mrkt.rprts@gmail.com** with:
-   - the report as **HTML email body**
+   - the **full report** as **HTML email body**
    - the report attached as **Word DOCX**
    - and any supporting attachments the script is configured to include
-9. Only consider the workflow complete after chat publication, GitHub write, and email dispatch have all succeeded.
+9. Capture a **positive delivery receipt** from the mail step that confirms:
+   - recipient = `mrkt.rprts@gmail.com`
+   - HTML body sent
+   - DOCX attached
+   - manifest written
+10. Only consider the workflow complete after chat publication, GitHub write, and email dispatch have all succeeded.
 
 ## Non-skipping rule
 You must not:
@@ -57,7 +62,9 @@ If a prior report exists, use it.
 If some fields are missing, make deterministic assumptions and state them briefly.
 
 ## Fail-loud rule
-If any mandatory delivery step fails — chat publication, GitHub write, HTML email generation, DOCX generation, or email dispatch — treat the workflow as **failed**, say so explicitly, and do **not** describe the job as complete.
+If any mandatory delivery step fails — chat publication, GitHub write, HTML email generation, full-report HTML rendering, DOCX generation, delivery-manifest creation, or email dispatch — treat the workflow as **failed**, say so explicitly, and do **not** describe the job as complete.
+
+You must not say that the email was sent unless you have a positive delivery receipt from `send_report.py` or equivalent delivery logic.
 
 ---
 
@@ -1128,6 +1135,17 @@ Always create the next available same-day version instead of silently overwritin
 ## Content parity rule
 The chat output and GitHub output must have the same substantive analysis and must both include all mandatory sections.
 
+## Delivery receipt rule
+After the email step succeeds, the final response must include a short delivery receipt outside the report body showing:
+- report filename
+- GitHub path
+- recipient
+- whether the HTML body contained the full report
+- whether the DOCX attachment was included
+- manifest filename if available
+
+If any of those fields cannot be confirmed, treat the workflow as failed.
+
 ## Mandatory email delivery requirement
 After the GitHub file is written, you must run `send_report.py` or equivalent delivery logic against the newest report.
 
@@ -1135,7 +1153,7 @@ The delivery target is:
 - **To:** `mrkt.rprts@gmail.com`
 
 The email must include, at minimum:
-- the report as an **HTML email body**
+- the **full report** as an **HTML email body**
 - the report attached as a **Word DOCX**
 
 It may also include:
@@ -1143,11 +1161,25 @@ It may also include:
 - an equity-curve PNG
 - a delivery manifest
 
+The email-delivery step is only valid if the send logic positively confirms all of the following:
+- recipient exactly equals `mrkt.rprts@gmail.com`
+- the HTML body contains the full report, not a summary-only digest
+- the DOCX attachment was generated and attached
+- a delivery manifest was written
+
 ## Completion rule
 The workflow is only complete after all three steps have succeeded:
 1. full report published in chat
 2. report written to GitHub
-3. email dispatched to `mrkt.rprts@gmail.com` with HTML body and DOCX attachment
+3. email dispatched to `mrkt.rprts@gmail.com` with the **full report as HTML body** and a DOCX attachment
+
+After those three steps, you must provide a short **delivery receipt** that explicitly states:
+- chat publication = success
+- GitHub write = success
+- email dispatch = success
+- recipient = `mrkt.rprts@gmail.com`
+- report filename
+- manifest filename if available
 
 ---
 
@@ -1171,7 +1203,11 @@ Neither a successful GitHub write nor a successful chat publication is sufficien
 The mandatory workflow is only complete when the full report has been:
 - published in chat
 - written to GitHub
-- and sent by email via `send_report.py` as HTML body plus DOCX attachment to `mrkt.rprts@gmail.com`
+- and sent by email via `send_report.py` as the **full HTML report body** plus DOCX attachment to `mrkt.rprts@gmail.com`
+
+A summary-only email body is not sufficient.
+A statement that the email was sent is not sufficient.
+A positive delivery receipt from the send step is required.
 
 ---
 
@@ -1195,4 +1231,8 @@ Before producing the final answer, silently verify:
 15. Did I implement the portfolio with whole shares and residual cash?
 16. Did I track portfolio value in EUR using the market close EUR/USD snapshot?
 17. Did I produce both chat output and GitHub output?
-18. If a prior report existed, did I avoid asking the user for manual portfolio input?
+18. Did I run the email-delivery step to `mrkt.rprts@gmail.com`?
+19. Did the email contain the **full report** as HTML body rather than a summary-only digest?
+20. Did I verify that the DOCX attachment was generated and attached?
+21. Did I obtain or surface a positive delivery receipt / manifest from the send step?
+22. If a prior report existed, did I avoid asking the user for manual portfolio input?
