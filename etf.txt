@@ -227,6 +227,8 @@ Do not let media narratives override stronger market or policy evidence.
 
 I will provide the portfolio using this structure when possible.
 
+If not explicitly provided use the most recent report as input that you can find here: https://raw.githubusercontent.com/market-predictions/daily-fx/main/output/
+
 ## Portfolio table
 | Ticker | ETF Name | Direction | Weight % | Avg Entry | Current Price | P/L % | Original Thesis | Role |
 |---|---|---:|---:|---:|---:|---:|---|---|
