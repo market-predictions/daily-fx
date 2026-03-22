@@ -418,27 +418,63 @@ def create_equity_curve_png(output_dir: Path, chart_path: Path):
 def preprocess_markdown_block(text: str, image_src: str | None = None) -> str:
     lines = text.splitlines()
     processed = []
+    i = 0
 
-    for line in lines:
+    while i < len(lines):
+        line = lines[i]
         stripped = clean_md_inline(line.strip())
+
         if stripped == "EQUITY_CURVE_CHART_PLACEHOLDER":
             if image_src:
                 processed.append(f"![Equity curve]({image_src})")
             else:
                 processed.append("_Equity curve chart unavailable for this delivery._")
+            i += 1
+            continue
+
+        if line.lstrip().startswith("### [Rank #"):
+            rank_line = clean_md_inline(line.lstrip()[4:])
+            rank_line = rank_line.replace("[", "").replace("]", "")
+            processed.append(f"### {rank_line}")
+            i += 1
             continue
 
         is_heading = line.lstrip().startswith("#")
         is_bullet = line.lstrip().startswith("- ") or bool(re.match(r"^\d+\.\s+", line.lstrip()))
         is_table = is_markdown_table_line(line)
 
+        if stripped == "Prospective score":
+            rows = []
+            j = i + 1
+            while j < len(lines):
+                nxt = lines[j].strip()
+                if not nxt:
+                    j += 1
+                    continue
+                if nxt.startswith("#") or nxt.startswith("### ") or nxt.startswith("#### ") or is_markdown_table_line(nxt):
+                    break
+                if nxt.startswith("- ") and ":" in nxt:
+                    k, v = clean_md_inline(nxt[2:]).split(":", 1)
+                    rows.append((k.strip(), v.strip()))
+                    j += 1
+                    continue
+                break
+            processed.append("#### Prospective score")
+            if rows:
+                processed.append("| Factor | Score |")
+                processed.append("|---|---:|")
+                for k, v in rows:
+                    processed.append(f"| {k} | {v} |")
+            i = j
+            continue
+
         if stripped in PLAIN_SUBHEADERS and not is_heading and not is_bullet and not is_table:
             processed.append(f"#### {stripped}")
         else:
             processed.append(line)
+        i += 1
 
-    return "\n".join(processed)
-
+    return "\\n".join(processed)
 
 def render_markdown_block(text: str, image_src: str | None = None) -> str:
     md = preprocess_markdown_block(strip_citations(text), image_src=image_src)
@@ -473,107 +509,131 @@ def section_header_html(number: int, title: str) -> str:
     )
 
 
+
+def parse_subsections(lines):
+    groups = OrderedDict()
+    current_header = None
+    for raw in lines:
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("### "):
+            current_header = clean_md_inline(stripped[4:])
+            groups[current_header] = []
+        elif stripped.startswith("- "):
+            if current_header is None:
+                current_header = "Items"
+                groups[current_header] = []
+            groups[current_header].append(clean_md_inline(stripped[2:]))
+        elif re.match(r"^\d+\.\s+", stripped):
+            if current_header is None:
+                current_header = "Items"
+                groups[current_header] = []
+            groups[current_header].append(clean_md_inline(re.sub(r"^\d+\.\s+", "", stripped)))
+        else:
+            if current_header is None:
+                current_header = "Items"
+                groups[current_header] = []
+            groups[current_header].append(clean_md_inline(stripped))
+    return groups
+
+
 def render_executive_summary(section: dict) -> str:
     pairs = extract_label_pairs(section["lines"])
     if not pairs:
         body = render_markdown_block("\n".join(section["lines"]))
         return f"<div class='panel panel-exec'>{section_header_html(section['number'], section['title'])}{body}</div>"
 
-    pair_map = OrderedDict(pairs)
-    chips = []
-    for key in ["Primary regime", "Secondary cross-current", "Geopolitical regime"]:
-        value = pair_map.get(key)
-        if value:
-            chips.append(chip_html(f"{key}: {value}", BRAND["champagne_soft"], BRAND["ink"]))
-
     body_parts = []
     for key, value in pairs:
-        if key in {"Primary regime", "Secondary cross-current", "Geopolitical regime"}:
+        if key in {"Primary regime", "Secondary cross-current", "Geopolitical regime", "Main takeaway"}:
             continue
-        if key.lower() == "main takeaway":
-            body_parts.append(
-                f"<div class='takeaway'><div class='takeaway-label'>{esc(key)}</div><div class='takeaway-text'>{esc(value)}</div></div>"
-            )
-        else:
-            body_parts.append(
-                f"<div class='summary-line'><div class='summary-key'>{esc(key)}</div><div class='summary-value'>{esc(value)}</div></div>"
-            )
+        body_parts.append(
+            f"<div class='summary-line'><div class='summary-key'>{esc(key)}</div><div class='summary-value'>{esc(value)}</div></div>"
+        )
+
+    takeaway = next((v for k, v in pairs if k.lower() == "main takeaway"), "")
+    takeaway_html = (
+        f"<div class='takeaway'><div class='takeaway-label'>Main takeaway</div><div class='takeaway-text'>{esc(takeaway)}</div></div>"
+        if takeaway else ""
+    )
 
     return (
         f"<div class='panel panel-exec'>"
         f"{section_header_html(section['number'], section['title'])}"
-        f"<h2 class='panel-title'>A premium first page should answer three questions in seconds.</h2>"
-        f"<div class='chip-row'>{''.join(chips)}</div>"
         f"{''.join(body_parts)}"
+        f"{takeaway_html}"
         f"</div>"
     )
 
-
 def render_action_snapshot(section: dict) -> str:
-    groups = []
-    current_header = None
-    current_items = []
+    groups = parse_subsections(section["lines"])
+    order = ["Add", "Hold", "Hold but replaceable", "Reduce", "Close"]
+    rows = []
+    for label in order:
+        items = groups.get(label, [])
+        val = ", ".join(items) if items else "None"
+        rows.append(f"<tr><th>{esc(label)}</th><td>{esc(val)}</td></tr>")
 
-    def flush():
-        nonlocal current_header, current_items
-        if not current_header:
-            return
-        bg, fg = action_tone(current_header)
-        items_html = "".join(f"<li>{esc(item)}</li>" for item in current_items) or "<li>No change</li>"
-        groups.append(
-            f"<div class='snapshot-group'>"
-            f"{chip_html(current_header, bg, fg)}"
-            f"<ul>{items_html}</ul>"
-            f"</div>"
-        )
+    def block(title):
+        items = groups.get(title, [])
+        if not items:
+            return ""
+        list_html = "".join(f"<li>{esc(item)}</li>" for item in items)
+        return f"<div class='subblock'><div class='subblock-title'>{esc(title)}</div><ul>{list_html}</ul></div>"
 
-    for line in section["lines"]:
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith("### "):
-            flush()
-            current_header = clean_md_inline(stripped[4:])
-            current_items = []
-        elif stripped.startswith("- "):
-            current_items.append(stripped[2:])
-        elif re.match(r"^\d+\.\s+", stripped):
-            current_items.append(re.sub(r"^\d+\.\s+", "", stripped))
-        else:
-            if current_header and clean_md_inline(stripped):
-                current_items.append(clean_md_inline(stripped))
-    flush()
+    replacements = block("Best replacements to fund")
+    actions = block("Top 3 actions this week")
+    risks = block("Top 3 risks this week")
 
     return (
         f"<div class='panel panel-snapshot'>"
         f"{section_header_html(section['number'], section['title'])}"
-        f"<h2 class='panel-title'>Suggested visual treatment</h2>"
-        f"{''.join(groups)}"
+        f"<table class='snapshot-table'>"
+        f"<thead><tr><th>Recommendation</th><th>Tickers / notes</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table>"
+        f"{replacements}"
+        f"<div class='subgrid'>{actions}{risks}</div>"
         f"</div>"
     )
-
 
 def render_risks(section: dict) -> str:
     body = render_markdown_block("\n".join(section["lines"]))
     return (
         f"<div class='panel panel-risks'>"
         f"{section_header_html(section['number'], section['title'])}"
-        f"<h2 class='panel-title'>Risk block should read like a premium alert</h2>"
         f"{body}"
         f"</div>"
     )
-
 
 def render_standard_panel(section: dict, image_src: str | None = None, extra_class: str = "") -> str:
     body = render_markdown_block("\n".join(section["lines"]), image_src=image_src)
     return (
         f"<div class='panel {extra_class}'>"
         f"{section_header_html(section['number'], section['title'])}"
-        f"<h2 class='panel-title'>{esc(section['title'])}</h2>"
         f"{body}"
         f"</div>"
     )
 
+
+def render_rotation_plan(section: dict) -> str:
+    groups = parse_subsections(section["lines"])
+    cols = ["Close", "Reduce", "Hold", "Add", "Replace"]
+    heads = "".join(f"<th>{esc(col)}</th>" for col in cols)
+    cells = []
+    for col in cols:
+        items = groups.get(col, [])
+        if items:
+            content = "<ul>" + "".join(f"<li>{esc(item)}</li>" for item in items) + "</ul>"
+        else:
+            content = "<div class='empty-cell'>None</div>"
+        cells.append(f"<td>{content}</td>")
+    return (
+        f"<div class='panel panel-rotation'>"
+        f"{section_header_html(section['number'], section['title'])}"
+        f"<table class='rotation-table'><thead><tr>{heads}</tr></thead><tbody><tr>{''.join(cells)}</tr></tbody></table>"
+        f"</div>"
+    )
 
 
 def build_report_html(
@@ -605,16 +665,33 @@ def build_report_html(
         client_grid.append(render_risks(sections_by_number[5]))
 
     client_panels = []
+    panel_map = {
+        6: "panel-bottomline panel-compact",
+        3: "panel-regime",
+        4: "panel-radar",
+        7: "panel-equity",
+    }
     for number in [6, 3, 4, 7]:
         if number in sections_by_number:
             img_src = image_src if number == 7 else None
-            extra = "panel-compact" if number == 6 else ""
+            extra = panel_map.get(number, "")
             client_panels.append(render_standard_panel(sections_by_number[number], image_src=img_src, extra_class=extra))
 
     analyst_panels = []
     for number in range(8, 18):
-        if number in sections_by_number:
-            analyst_panels.append(render_standard_panel(sections_by_number[number]))
+        if number not in sections_by_number:
+            continue
+        section = sections_by_number[number]
+        if number == 10:
+            analyst_panels.append(render_standard_panel(section, extra_class="panel-positions"))
+        elif number == 11:
+            analyst_panels.append(render_standard_panel(section, extra_class="panel-opportunities"))
+        elif number == 12:
+            analyst_panels.append(render_rotation_plan(section))
+        elif number == 16:
+            analyst_panels.append(render_standard_panel(section, extra_class="panel-carry"))
+        else:
+            analyst_panels.append(render_standard_panel(section))
 
     css_common = f"""
     * {{
@@ -629,19 +706,15 @@ def build_report_html(
       -webkit-font-smoothing: antialiased;
     }}
     .report-shell {{
-      max-width: 1480px;
+      max-width: 1320px;
       margin: 0 auto;
       padding: 0 0 18px 0;
     }}
     .hero {{
       background: {BRAND['header']};
       color: {BRAND['header_text']};
-      padding: 24px 28px 20px 28px;
+      padding: 24px 30px 22px 30px;
       border-radius: 14px 14px 0 0;
-      display: flex;
-      justify-content: space-between;
-      gap: 24px;
-      align-items: flex-start;
     }}
     .masthead {{
       font-family: Georgia, "Times New Roman", serif;
@@ -652,55 +725,41 @@ def build_report_html(
       text-transform: uppercase;
     }}
     .hero-sub {{
-      font-size: 14px;
+      font-size: 15px;
       color: #EFF4F6;
       margin: 0;
     }}
-    .hero-meta {{
-      min-width: 220px;
-      text-align: right;
-    }}
-    .hero-date {{
-      font-size: 24px;
-      font-weight: 700;
-      margin: 0 0 8px 0;
-    }}
-    .hero-edition {{
-      font-size: 13px;
-      margin: 0 0 10px 0;
-      color: #EFF4F6;
-    }}
     .hero-rule {{
-      height: 6px;
+      height: 5px;
       background: {BRAND['champagne']};
       margin: 8px 0 18px 0;
       border-radius: 999px;
     }}
     .notice {{
-      background: #F2F0EB;
+      background: #F8F4EE;
       border: 1px solid {BRAND['border']};
       color: {BRAND['muted']};
-      border-radius: 16px;
-      padding: 14px 18px;
-      font-size: 14px;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 13px;
       margin: 0 0 18px 0;
     }}
     .summary-strip {{
-      display: flex;
-      gap: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 14px;
       margin: 0 0 18px 0;
     }}
     .mini-card {{
-      flex: 1 1 0;
       background: {BRAND['surface']};
       border: 1px solid {BRAND['border']};
-      border-radius: 18px;
+      border-radius: 16px;
       padding: 14px 18px;
     }}
     .mini-label {{
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      letter-spacing: .04em;
+      letter-spacing: .06em;
       text-transform: uppercase;
       color: {BRAND['muted']};
       margin: 0 0 8px 0;
@@ -710,11 +769,11 @@ def build_report_html(
       font-weight: 700;
       font-size: 22px;
       color: {BRAND['ink']};
-      line-height: 1.18;
+      line-height: 1.22;
     }}
     .client-grid {{
       display: grid;
-      grid-template-columns: 1.7fr 1fr;
+      grid-template-columns: 1.35fr 1fr;
       gap: 18px;
       align-items: start;
       margin: 0 0 18px 0;
@@ -723,7 +782,7 @@ def build_report_html(
       background: {BRAND['surface']};
       border: 1px solid {BRAND['border']};
       border-radius: 18px;
-      padding: 20px 22px;
+      padding: 18px 20px;
       margin: 0 0 18px 0;
     }}
     .panel-compact,
@@ -733,52 +792,34 @@ def build_report_html(
       page-break-inside: avoid;
       break-inside: avoid-page;
     }}
-    .panel-exec {{
-      grid-row: span 2;
-      min-height: 100%;
-    }}
-    .panel-title {{
-      margin: 0 0 14px 0;
-      color: {BRAND['ink']};
-      font-size: 20px;
-      line-height: 1.25;
-      font-weight: 700;
-    }}
     .section-kicker {{
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin: 0 0 14px 0;
+      gap: 12px;
+      margin: 0 0 18px 0;
     }}
     .section-badge {{
-      width: 34px;
-      height: 34px;
-      line-height: 34px;
-      text-align: center;
+      width: 38px;
+      height: 38px;
       border-radius: 999px;
       background: #2A5384;
       color: #ffffff;
       font-weight: 700;
-      font-size: 15px;
+      font-size: 17px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       flex: 0 0 auto;
+      line-height: 1;
     }}
     .section-label {{
       font-size: 13px;
       font-weight: 700;
-      letter-spacing: .04em;
+      letter-spacing: .06em;
       text-transform: uppercase;
       color: {BRAND['muted']};
-    }}
-    .chip-row {{
-      margin: 0 0 14px 0;
-    }}
-    .chip {{
-      display: inline-block;
-      padding: 7px 14px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      margin: 0 8px 8px 0;
+      line-height: 1;
+      transform: translateY(1px);
     }}
     .summary-line {{
       margin: 0 0 12px 0;
@@ -787,53 +828,100 @@ def build_report_html(
     }}
     .summary-key {{
       color: {BRAND['muted']};
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .04em;
+      letter-spacing: .06em;
       margin: 0 0 6px 0;
     }}
     .summary-value {{
       color: {BRAND['ink']};
       font-size: 15px;
-      line-height: 1.52;
+      line-height: 1.55;
     }}
     .takeaway {{
       margin: 18px 0 0 0;
       padding: 14px 16px;
-      border-radius: 14px;
-      background: #F1EADF;
-      border: 1px solid #E6D8C0;
+      border-radius: 12px;
+      background: #F4EEE4;
+      border: 1px solid #E7D7BB;
     }}
     .takeaway-label {{
       color: {BRAND['muted']};
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .04em;
+      letter-spacing: .06em;
       margin: 0 0 6px 0;
     }}
     .takeaway-text {{
       color: {BRAND['ink']};
-      font-size: 17px;
+      font-size: 18px;
       font-weight: 700;
-      line-height: 1.4;
+      line-height: 1.42;
     }}
-    .snapshot-group {{
-      margin: 0 0 14px 0;
+    .snapshot-table,
+    .rotation-table {{
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 16px 0;
+      border: 1px solid {BRAND['border']};
+      table-layout: fixed;
     }}
-    .snapshot-group ul {{
-      margin: 10px 0 0 22px;
-      padding: 0;
+    .snapshot-table th,
+    .rotation-table th {{
+      background: #F2EBDD;
+      color: {BRAND['ink']};
+      text-align: left;
+      padding: 9px 10px;
+      border-bottom: 1px solid {BRAND['border']};
+      font-size: 13px;
+      font-weight: 700;
     }}
-    .snapshot-group li {{
-      margin: 0 0 6px 0;
-      line-height: 1.45;
+    .snapshot-table td,
+    .rotation-table td {{
+      padding: 9px 10px;
+      border-bottom: 1px solid #ECE6DE;
+      vertical-align: top;
       font-size: 14px;
+      line-height: 1.5;
+      word-break: break-word;
+    }}
+    .snapshot-table tbody tr:nth-child(even) td,
+    .rotation-table tbody tr:nth-child(even) td {{
+      background: #FEFCF9;
+    }}
+    .rotation-table ul {{
+      margin: 0;
+      padding-left: 18px;
+    }}
+    .subgrid {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }}
+    .subblock {{
+      margin: 0 0 14px 0;
+      padding: 12px 14px;
+      background: #FBF7F0;
+      border: 1px solid {BRAND['border']};
+      border-radius: 12px;
+    }}
+    .subblock-title {{
+      color: {BRAND['muted']};
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin: 0 0 8px 0;
+    }}
+    .subblock ul {{
+      margin: 0;
+      padding-left: 18px;
     }}
     .panel p, .panel li {{
       font-size: 14px;
-      line-height: 1.55;
+      line-height: 1.58;
       margin-top: 0;
     }}
     .panel ul, .panel ol {{
@@ -842,36 +930,36 @@ def build_report_html(
     }}
     .panel h3 {{
       color: {BRAND['ink']};
-      font-size: 15px;
-      margin: 16px 0 8px 0;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.35;
+      margin: 18px 0 10px 0;
     }}
     .panel h4 {{
       color: {BRAND['muted']};
-      font-size: 13px;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: .04em;
-      margin: 16px 0 8px 0;
+      letter-spacing: .08em;
+      font-weight: 700;
+      margin: 18px 0 8px 0;
     }}
     .panel blockquote {{
       margin: 12px 0;
       padding: 10px 12px;
       border-left: 4px solid {BRAND['champagne']};
-      background: #F4F0E8;
+      background: #F8F3EB;
       color: {BRAND['muted']};
     }}
     .panel table {{
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      margin: 14px 0 12px 0;
+      margin: 12px 0 14px 0;
       border: 1px solid {BRAND['border']};
       font-size: 12px;
     }}
     .panel thead {{
       display: table-header-group;
-    }}
-    .panel tbody {{
-      display: table-row-group;
     }}
     .panel th {{
       text-align: left;
@@ -880,16 +968,14 @@ def build_report_html(
       background: #F2EBDD;
       color: {BRAND['ink']};
       vertical-align: middle;
+      font-size: 12px;
+      font-weight: 700;
     }}
     .panel td {{
       padding: 8px 10px;
       border-bottom: 1px solid #ECE6DE;
       vertical-align: top;
       word-wrap: break-word;
-    }}
-    .panel tr {{
-      page-break-inside: avoid;
-      break-inside: avoid;
     }}
     .panel tr:nth-child(even) td {{
       background: #FEFCF9;
@@ -902,12 +988,44 @@ def build_report_html(
       margin: 10px 0 4px 0;
       display: block;
     }}
+    .panel-positions h3 {{
+      margin-top: 22px;
+      padding: 10px 12px;
+      background: #F7F1E8;
+      border: 1px solid {BRAND['border']};
+      border-radius: 10px;
+      font-size: 17px;
+    }}
+    .panel-opportunities h3 {{
+      margin-top: 22px;
+      font-size: 22px;
+      font-weight: 700;
+    }}
+    .panel-opportunities h4:first-of-type {{
+      margin-top: 10px;
+    }}
+    .panel-opportunities a {{
+      display: inline-block;
+      margin: 0 0 12px 0;
+      font-size: 14px;
+    }}
+    .panel-carry > p:first-of-type {{
+      padding: 12px 14px;
+      background: #F8F4EE;
+      border: 1px solid {BRAND['border']};
+      border-radius: 12px;
+      font-weight: 700;
+    }}
+    .empty-cell {{
+      color: {BRAND['muted']};
+      font-style: italic;
+    }}
     .analyst-divider {{
-      margin: 8px 0 18px 0;
+      margin: 10px 0 18px 0;
       padding: 10px 0 0 0;
       border-top: 1px solid {BRAND['border']};
       color: {BRAND['muted']};
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .08em;
@@ -923,18 +1041,14 @@ def build_report_html(
       margin-top: 0;
     }
     @media screen and (max-width: 1100px) {
-      .hero, .summary-strip, .client-grid {
+      .summary-strip, .client-grid, .subgrid {
         display: block;
-      }
-      .hero-meta {
-        text-align: left;
-        margin-top: 16px;
       }
       .mini-card, .panel {
         margin-bottom: 16px;
       }
-      .panel-exec {
-        min-height: auto;
+      .rotation-table, .snapshot-table, .panel table {
+        table-layout: auto;
       }
     }
     """
@@ -951,26 +1065,15 @@ def build_report_html(
       max-width: none;
       padding-bottom: 0;
     }}
-    .hero,
-    .notice,
-    .summary-strip,
-    .panel-compact,
-    .panel-exec,
-    .panel-snapshot,
-    .panel-risks,
-    .mini-card {{
+    .hero, .notice, .summary-strip, .panel-compact, .panel-exec, .panel-snapshot, .panel-risks, .mini-card {{
       page-break-inside: avoid;
       break-inside: avoid-page;
     }}
     .hero {{
       border-radius: 10px 10px 0 0;
-      padding: 20px 22px 16px 22px;
-    }}
-    .hero-meta {{
-      min-width: 180px;
+      padding: 20px 22px 18px 22px;
     }}
     .summary-strip {{
-      display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }}
@@ -985,16 +1088,20 @@ def build_report_html(
       padding: 16px 18px;
       margin-bottom: 14px;
     }}
-    .panel-exec {{
-      min-height: auto;
-      grid-row: auto;
-    }}
-    .panel table {{
+    .snapshot-table, .rotation-table, .panel table {{
       table-layout: auto;
       font-size: 11px;
     }}
+    .snapshot-table th, .snapshot-table td,
+    .rotation-table th, .rotation-table td,
     .panel th, .panel td {{
       padding: 6px 8px;
+    }}
+    .subgrid {{
+      display: block;
+    }}
+    .subblock {{
+      margin-bottom: 10px;
     }}
     .panel img {{
       max-height: 170mm;
@@ -1017,52 +1124,17 @@ def build_report_html(
       color: #222222;
       font-family: Arial, Helvetica, sans-serif;
     }
-    .report-shell {
-      max-width: none;
-    }
-    .hero,
-    .summary-strip,
-    .client-grid {
-      display: block;
-    }
-    .hero {
-      padding: 16px 18px;
-      border-radius: 6px 6px 0 0;
-    }
-    .hero-meta {
-      text-align: left;
-      margin-top: 12px;
-      min-width: 0;
-    }
-    .hero-rule {
-      margin-bottom: 12px;
-    }
-    .summary-strip .mini-card {
-      margin-bottom: 10px;
-    }
-    .panel {
-      page-break-inside: auto;
-      break-inside: auto;
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin-bottom: 12px;
-    }
-    .panel-exec {
-      min-height: auto;
-      grid-row: auto;
-    }
-    .panel table {
-      table-layout: auto;
-      font-size: 10.5px;
-    }
-    .panel th, .panel td {
-      padding: 5px 7px;
-    }
-    .analyst-divider {
-      page-break-before: always;
-      break-before: page;
-      margin-top: 6px;
-    }
+    .report-shell { max-width: none; }
+    .summary-strip, .client-grid, .subgrid { display: block; }
+    .hero { padding: 16px 18px; border-radius: 6px 6px 0 0; }
+    .hero-rule { margin-bottom: 12px; }
+    .mini-card, .panel, .subblock { margin-bottom: 10px; }
+    .panel { page-break-inside: auto; break-inside: auto; border-radius: 8px; padding: 14px 16px; }
+    .snapshot-table, .rotation-table, .panel table { table-layout: auto; font-size: 10.5px; }
+    .snapshot-table th, .snapshot-table td,
+    .rotation-table th, .rotation-table td,
+    .panel th, .panel td { padding: 5px 7px; }
+    .analyst-divider { page-break-before: always; break-before: page; margin-top: 6px; }
     """
 
     mode_css = email_css
@@ -1073,10 +1145,7 @@ def build_report_html(
 
     analyst_appendix = ""
     if analyst_panels:
-        analyst_appendix = (
-            "<div class='analyst-divider'>Analyst appendix</div>"
-            + "".join(analyst_panels)
-        )
+        analyst_appendix = "<div class='analyst-divider'>Analyst appendix</div>" + "".join(analyst_panels)
 
     html = f"""
     <html>
@@ -1087,15 +1156,8 @@ def build_report_html(
       <body>
         <div class="report-shell">
           <div class="hero">
-            <div>
-              <div class="masthead">WEEKLY ETF REVIEW</div>
-              <p class="hero-sub">{esc(report_title or f"Weekly Report Review {report_date_str}")}</p>
-            </div>
-            <div class="hero-meta">
-              <div class="hero-date">{esc(report_date_str)}</div>
-              <div class="hero-edition">Weekly Allocation Review</div>
-              <div class="hero-edition">Client edition</div>
-            </div>
+            <div class="masthead">WEEKLY ETF REVIEW</div>
+            <p class="hero-sub">{esc(report_title or f"Weekly Report Review {report_date_str}")}</p>
           </div>
           <div class="hero-rule"></div>
           <div class="notice">{esc(DISCLAIMER_LINE)}</div>
@@ -1107,7 +1169,6 @@ def build_report_html(
     </html>
     """
     return html.strip()
-
 
 def create_pdf_from_html(html: str, output_path: Path, fallback_html: str | None = None) -> None:
     try:
