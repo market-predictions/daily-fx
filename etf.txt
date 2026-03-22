@@ -150,71 +150,72 @@ Always start with what changed, what to do, and why.
 The HTML body and PDF are rendered by a downstream delivery script. Your job is to write content that fits that premium visual system cleanly.
 
 ## Visual intent
-The delivered report must feel like a premium weekly private-bank style briefing, not a generic word-processor export.
+The delivered report must feel like a premium weekly private-bank style briefing, not a generic word-processor export, dashboard toy, or PowerPoint-like mock-up.
 
-The visual system assumes:
+The HTML email is the lead client-facing product.
+The PDF must follow the same design language, but it must not force the email into a PDF-like reading experience.
+
+## Core visual principles
+The delivery system assumes:
 - a light warm paper background
 - a darker slate-teal header band
-- a serif masthead for the report title
-- sans-serif body text
+- a serif masthead for the product name only
+- sans-serif body typography
 - restrained champagne accent rules
-- rounded white cards / modules
-- clean spacing and strong hierarchy
-- landscape-first PDF delivery
+- minimal icon use
+- strong spacing discipline
+- no decorative repetition
+- clear separation between executive layer and analyst appendix
+- compact, clean tables where tables improve scanning
+- PDF layout that follows the email design language but uses print-safe pagination
 
-## Primary-medium rule
-Treat the HTML email body as the primary client reading experience.
-Treat the PDF as the aligned attachment version of the same report.
-The PDF must remain client-safe and professional, but the email body must receive first priority for scanability, hierarchy, and executive usability.
-
-## Email composition rule
-The delivery script may visually sequence the client layer in this order inside the email body, even if the Markdown report itself preserves the canonical section numbering:
-1. Executive Summary
-2. Portfolio Action Snapshot
-3. Bottom Line
-4. Key Risks
-5. Regime Dashboard
-6. Structural Opportunity Radar
-7. Equity Curve and Portfolio Development
-
-This visual resequencing is allowed only if:
-- the substance stays the same
-- no required section is omitted
-- the full report still appears in the email body
-- the analyst layer remains available below the client layer
+## Non-negotiable presentation rules
+Write in a way that supports a clean executive email:
+- no repeated section naming inside the same section
+- no duplicate header text that says the same thing twice
+- no decorative internal labels such as "institutional", "client edition", "HTML/PDF", or implementation notes inside the report body
+- no unnecessary placeholder language such as "Suggested visual treatment"
+- no visual clutter caused by too many colored pills, soft badges, or app-like UI elements
+- no cheap or playful icon use inside the body
+- no long unbroken walls of bullets when a compact table would communicate better
+- no excessive subheading variation that creates visual noise without adding hierarchy
 
 ## Writing rules required by the visual system
 Write in a way that supports premium HTML/PDF rendering:
-
 - Keep section openings short and decisive.
 - Keep the Executive Summary compact and highly scannable.
 - Keep action lists tight; do not flood the action snapshot with long bullets.
 - Use short label-value lines where the structure asks for them.
 - Keep tables compact, complete, and cleanly formatted.
 - Avoid unnecessary filler sentences before the main conclusion.
-- Avoid decorative meta text such as "institutional", "HTML/PDF", "premium", or implementation notes inside the report body.
 - Do not write comments about formatting, design, rendering, or file generation into the report content.
-- Do not invent extra top-of-report labels outside the required structure.
 - Prefer concise paragraphs over long narrative blocks.
-- Avoid repeating the same conclusion across Executive Summary, Bottom Line, and Portfolio Action Snapshot unless the repetition materially adds decision value.
+- Keep repetitive wording to a minimum, especially across the executive sections.
+- When the same point already appears in Executive Summary or Bottom Line, do not restate it again unless the later section adds new information.
 
-## Precise editorial constraints
-Apply these constraints unless the user explicitly overrides them:
+## Section-specific formatting expectations
+The delivery system expects the following:
+- Executive Summary: compact summary lines plus a single decisive main takeaway.
+- Portfolio Action Snapshot: present the action states in a compact, executive-friendly structure that can be rendered as a clean table or matrix.
+- Regime Dashboard: no repeated heading inside the section body.
+- Structural Opportunity Radar: no repeated heading inside the section body.
+- Current Position Review: each ticker block must begin with a clearly identifiable ticker / ETF heading and remain visually distinct from the next ticker.
+- Best New Opportunities: each ranked opportunity must have a clean title line; avoid raw bracket-style labels such as `[Rank #1]` in the rendered output.
+- Prospective score: the underlying content must stay factor-by-factor, but it must be renderable as a compact 2-column factor/score table.
+- Portfolio Rotation Plan: content must be cleanly renderable as a compact table or matrix instead of a long vertical icon stack.
+- Carry-forward Input for Next Run: preserve the required canonical sentence exactly, but keep the rest structured and table-friendly.
 
-- **What changed this week:** one short paragraph, ideally 45-90 words.
-- **Overall portfolio judgment:** one short paragraph, ideally 35-80 words.
-- **Main takeaway:** one decisive sentence, ideally under 18 words.
-- **Top 3 actions this week:** one line per item, no sub-bullets.
-- **Top 3 risks this week:** one line per item, no sub-bullets.
-- **Bottom line section:** keep it to the required bullets only; do not add an extra explanatory paragraph below them.
-- **Structural Opportunity Radar follow-up paragraph:** keep it compact; ideally 60-120 words.
-- **Key risks / invalidators:** concise bullets, not mini-essays.
-- **Analyst-layer prose:** keep it factual and complete, but avoid avoidable repetition and long scene-setting paragraphs.
+## Icon rule
+Icons are optional, not mandatory.
+If icons are used at all, use them sparingly and only where they clearly improve scanability.
+Do not rely on icons to create hierarchy.
+Do not create a different icon treatment for every subsection.
+The email should still look complete and premium if almost all body icons are removed.
 
-## Client-attachment rule
-The client-facing attachment format is PDF, not DOCX.
-By default, the client email should attach only the PDF unless the user explicitly wants extra client-facing attachments.
+## Attachment rule
+The client attachment format is PDF, not DOCX.
 The PDF and HTML body must contain the same substantive report.
+The PDF follows the email style system; it does not lead it.
 
 ---
 
@@ -252,6 +253,9 @@ Use a clean, consistent icon regime to improve scanability. Use icons to improve
 - Put the most important client actions near the top.
 - Keep the report visually consistent across runs.
 - Do not bury the action call in long narrative text.
+- Do not create redundant headings that repeat the section title.
+- Prefer one strong hierarchy system over many slightly different visual heading styles.
+- When a section is table-friendly, keep it table-friendly instead of turning it into long decorative bullet lists.
 
 ## Disclaimer display rules
 Use a subtle Markdown-safe callout directly below the report title.
@@ -862,6 +866,7 @@ For each position:
 [use full format]
 
 ## 12. 🔁 Portfolio rotation plan
+This section must remain easy to render as a compact matrix or table in the delivery layer.
 ### ❌ Close
 ### ➖ Reduce
 ### ✅ Hold
