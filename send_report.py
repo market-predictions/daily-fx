@@ -170,6 +170,10 @@ def html_to_plain_text(html: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def plain_text_from_markdown(md_text: str) -> str:
+    return html_to_plain_text(MARKDOWN(strip_citations(md_text)))
+
+
 def esc(text: str) -> str:
     text = clean_md_inline(text)
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
