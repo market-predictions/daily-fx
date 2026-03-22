@@ -1,13 +1,14 @@
 import os
 import re
 import smtplib
-from dataclasses import dataclass
 from pathlib import Path
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from collections import OrderedDict
 
+import matplotlib.pyplot as plt
 from docx import Document
 from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -34,7 +35,40 @@ PRO_HEADER_FILL = "E2F0D9"
 CONTRA_HEADER_FILL = "FCE4D6"
 DISCLAIMER_FILL = "F3F4F6"
 RADAR_FILL = "FFF4E5"
-PORTFOLIO_FILL = "EAF4EA"
+TRACKING_FILL = "EAF4EA"
+
+
+# ---------- REPORT FILE DISCOVERY ----------
+REPORT_RE = re.compile(r"^weekly_analysis_(\d{6})(?:_(\d{2}))?\.md$")
+
+
+def report_sort_key(path: Path):
+    m = REPORT_RE.match(path.name)
+    if not m:
+        return ("", -1)
+    base_date = m.group(1)
+    version = int(m.group(2) or "1")
+    return (base_date, version)
+
+
+def list_report_files(output_dir: Path):
+    files = [p for p in output_dir.glob("weekly_analysis_*.md") if REPORT_RE.match(p.name)]
+    return sorted(files, key=report_sort_key)
+
+
+def latest_report_file(output_dir: Path) -> Path:
+    reports = list_report_files(output_dir)
+    if not reports:
+        raise FileNotFoundError("No weekly_analysis_*.md file found in output/")
+    return reports[-1]
+
+
+def latest_reports_by_day(output_dir: Path):
+    latest_per_day = OrderedDict()
+    for path in list_report_files(output_dir):
+        base_date, version = report_sort_key(path)
+        latest_per_day[base_date] = path
+    return list(latest_per_day.values())
 
 
 # ---------- CLEANUP ----------
@@ -62,6 +96,156 @@ def clean_md_inline(text: str) -> str:
 
 def is_markdown_link_line(text: str) -> bool:
     return bool(re.match(r"^\[.*?\]\(https?://.*?\)$", text.strip()))
+
+
+# ---------- PARSING HELPERS ----------
+def parse_report_date(md_text: str, fallback: str = None) -> str:
+    m = re.search(r"^#\s+Weekly Report Review\s+(\d{4}-\d{2}-\d{2})\s*$", md_text, flags=re.MULTILINE)
+    if m:
+        return m.group(1)
+    return fallback or datetime.now().strftime("%Y-%m-%d")
+
+
+def extract_section(md_text: str, title_contains: str):
+    lines = md_text.splitlines()
+    result = []
+    in_section = False
+    title_contains = title_contains.lower()
+
+    for line in lines:
+        stripped = line.strip()
+        if re.match(r"^##\s+\d+\.\s+", stripped):
+            current_title = clean_md_inline(re.sub(r"^##\s+\d+\.\s+", "", stripped))
+            if title_contains in current_title.lower():
+                in_section = True
+                result.append(stripped)
+                continue
+            elif in_section:
+                break
+        elif in_section:
+            result.append(line)
+    return result
+
+
+def extract_bullets(lines):
+    items = []
+    for line in lines:
+        s = line.strip()
+        if s.startswith("- "):
+            items.append(clean_md_inline(s[2:]))
+        elif re.match(r"^\d+\.\s+", s):
+            items.append(clean_md_inline(re.sub(r"^\d+\.\s+", "", s)))
+    return items
+
+
+def extract_label_pairs(lines):
+    pairs = []
+    for line in lines:
+        s = clean_md_inline(line.strip())
+        if not s or s.startswith("## "):
+            continue
+        if ":" in s:
+            k, v = s.split(":", 1)
+            pairs.append((k.strip(), v.strip()))
+    return pairs
+
+
+def is_markdown_table_line(line: str) -> bool:
+    line = line.strip()
+    return line.startswith("|") and line.endswith("|") and "|" in line[1:-1]
+
+
+def is_markdown_separator_line(line: str) -> bool:
+    line = line.strip()
+    if not is_markdown_table_line(line):
+        return False
+    cells = [c.strip() for c in line.strip("|").split("|")]
+    return all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
+
+
+def parse_markdown_table(lines):
+    rows = []
+    for i, line in enumerate(lines):
+        if i == 1 and is_markdown_separator_line(line):
+            continue
+        rows.append([clean_md_inline(c) for c in line.strip().strip("|").split("|")])
+    return rows
+
+
+def extract_table_rows(lines, max_rows=5):
+    table_lines = []
+    started = False
+    for line in lines:
+        if is_markdown_table_line(line):
+            table_lines.append(line)
+            started = True
+        elif started:
+            break
+    if len(table_lines) >= 2:
+        rows = parse_markdown_table(table_lines)
+        return rows[: max_rows + 1]
+    return []
+
+
+def parse_numeric_value(md_text: str, label: str):
+    pattern = rf"^- {re.escape(label)}:\s*([0-9][0-9,._%-]*)"
+    m = re.search(pattern, md_text, flags=re.MULTILINE)
+    if not m:
+        return None
+    raw = m.group(1).replace(",", "").replace("_", "").replace("%", "")
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def parse_section15_totals(md_text: str):
+    section = "\n".join(extract_section(md_text, "Current portfolio holdings and cash"))
+    if not section:
+        return {}
+    labels = [
+        "Starting capital (EUR)",
+        "Invested market value (EUR)",
+        "Cash (EUR)",
+        "Total portfolio value (EUR)",
+        "Since inception return (%)",
+        "EUR/USD used",
+    ]
+    data = {}
+    for label in labels:
+        value = parse_numeric_value(section, label)
+        if value is not None:
+            data[label] = value
+    return data
+
+
+# ---------- EQUITY CURVE ----------
+def create_equity_curve_png(output_dir: Path, chart_path: Path):
+    points = []
+    for report_path in latest_reports_by_day(output_dir):
+        md_text = report_path.read_text(encoding="utf-8")
+        report_date = parse_report_date(md_text)
+        totals = parse_section15_totals(md_text)
+        nav = totals.get("Total portfolio value (EUR)")
+        if nav is not None:
+            points.append((report_date, nav))
+
+    if not points:
+        return None
+
+    dates = [datetime.strptime(d, "%Y-%m-%d") for d, _ in points]
+    values = [v for _, v in points]
+
+    plt.figure(figsize=(8.6, 3.8))
+    plt.plot(dates, values, marker="o", linewidth=2)
+    plt.title("Equity Curve (EUR)")
+    plt.xlabel("Date")
+    plt.ylabel("Portfolio value (EUR)")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(chart_path, dpi=180)
+    plt.close()
+    return chart_path
 
 
 # ---------- DOCX HELPERS ----------
@@ -112,7 +296,8 @@ def set_cell_shading(cell, fill: str) -> None:
 def add_note_callout(doc: Document, text: str) -> None:
     p = doc.add_paragraph()
     set_paragraph_shading(p, DISCLAIMER_FILL)
-    paragraph_run(p, text, italic=True, size=9.5, color=COLOR_MUTED)
+    paragraph_run(p, "Note ", bold=True, color=COLOR_LABEL, size=9.5)
+    paragraph_run(p, text, italic=True, size=9.5)
 
 
 def add_hyperlink(paragraph, text: str, url: str, color="0563C1", underline=True):
@@ -142,28 +327,6 @@ def add_hyperlink(paragraph, text: str, url: str, color="0563C1", underline=True
     hyperlink.append(new_run)
     paragraph._p.append(hyperlink)
     return hyperlink
-
-
-def is_markdown_table_line(line: str) -> bool:
-    line = line.strip()
-    return line.startswith("|") and line.endswith("|") and "|" in line[1:-1]
-
-
-def is_markdown_separator_line(line: str) -> bool:
-    line = line.strip()
-    if not is_markdown_table_line(line):
-        return False
-    cells = [c.strip() for c in line.strip("|").split("|")]
-    return all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
-
-
-def parse_markdown_table(lines):
-    rows = []
-    for i, line in enumerate(lines):
-        if i == 1 and is_markdown_separator_line(line):
-            continue
-        rows.append([clean_md_inline(c) for c in line.strip().strip("|").split("|")])
-    return rows
 
 
 def color_for_term(text: str):
@@ -197,7 +360,7 @@ def add_styled_table(doc: Document, rows):
     headers = [c.lower() for c in rows[0]]
     is_pro_contra = len(rows[0]) == 2 and any("pro" in h for h in headers) and any("contra" in h for h in headers)
     is_radar = "theme" in headers[0] and "primary etf" in " ".join(headers)
-    is_portfolio = "shares" in " ".join(headers) or "market value eur" in " ".join(headers)
+    is_tracking = "ticker" in headers[0] and ("shares" in " ".join(headers) or "previous weight %" in " ".join(headers))
 
     for r_idx, row in enumerate(rows):
         for c_idx in range(max_cols):
@@ -211,13 +374,13 @@ def add_styled_table(doc: Document, rows):
                     set_cell_shading(cell, CONTRA_HEADER_FILL)
                 elif is_radar:
                     set_cell_shading(cell, RADAR_FILL)
-                elif is_portfolio:
-                    set_cell_shading(cell, PORTFOLIO_FILL)
+                elif is_tracking:
+                    set_cell_shading(cell, TRACKING_FILL)
                 else:
                     set_cell_shading(cell, TABLE_HEADER_FILL)
             else:
                 set_cell_text(cell, value, color=color_for_term(value))
-                if not is_pro_contra and not is_radar and not is_portfolio and r_idx % 2 == 0:
+                if not (is_pro_contra or is_radar or is_tracking) and r_idx % 2 == 0:
                     set_cell_shading(cell, TABLE_ALT_FILL)
 
     doc.add_paragraph("")
@@ -242,15 +405,10 @@ PLAIN_SUBHEADERS = {
     "Top 3 actions this week",
     "Top 3 risks this week",
     "Best structural opportunities not yet actionable",
-    "Execution assumptions",
-    "Position changes executed this run",
-    "Cash movement summary",
-    "Compact position changes this run",
 }
 
 
-# ---------- DOCX BUILDER ----------
-def build_docx_from_markdown(md_text: str, output_path: Path):
+def build_docx_from_markdown(md_text: str, output_path: Path, equity_curve_path: Path = None):
     doc = Document()
     set_document_layout(doc)
 
@@ -271,14 +429,18 @@ def build_docx_from_markdown(md_text: str, output_path: Path):
             i += 1
             continue
 
-        if stripped.startswith(">"):
-            note_lines = []
-            while i < len(lines) and lines[i].strip().startswith(">"):
-                note_lines.append(clean_md_inline(lines[i].strip().lstrip(">").strip()))
-                i += 1
-            note_text = " ".join(x for x in note_lines if x)
-            if note_text:
-                add_note_callout(doc, note_text)
+        if stripped.startswith("> *This report is for informational and educational purposes only"):
+            add_note_callout(doc, clean_md_inline(stripped.lstrip(">").strip()))
+            i += 1
+            continue
+
+        if stripped == "EQUITY_CURVE_CHART_PLACEHOLDER":
+            if equity_curve_path and equity_curve_path.exists():
+                p = doc.add_paragraph()
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                doc.add_picture(str(equity_curve_path), width=Inches(8.6))
+                doc.add_paragraph("")
+            i += 1
             continue
 
         if is_markdown_link_line(stripped):
@@ -335,62 +497,6 @@ def build_docx_from_markdown(md_text: str, output_path: Path):
     doc.save(output_path)
 
 
-# ---------- SECTION HELPERS ----------
-def extract_section(md_text: str, header: str):
-    lines = md_text.splitlines()
-    result = []
-    in_section = False
-    for line in lines:
-        stripped = line.strip()
-        if stripped == header:
-            in_section = True
-            result.append(stripped)
-            continue
-        if in_section and re.match(r"^##\s+\d+\.", stripped):
-            break
-        if in_section:
-            result.append(line)
-    return result
-
-
-def extract_bullets(lines):
-    items = []
-    for line in lines:
-        s = line.strip()
-        if s.startswith("- "):
-            items.append(clean_md_inline(s[2:]))
-        elif re.match(r"^\d+\.\s+", s):
-            items.append(clean_md_inline(re.sub(r"^\d+\.\s+", "", s)))
-    return items
-
-
-def extract_label_pairs(lines):
-    pairs = []
-    for line in lines:
-        s = clean_md_inline(line.strip())
-        if not s or s.startswith("## "):
-            continue
-        if ":" in s and not s.startswith("http"):
-            k, v = s.split(":", 1)
-            pairs.append((k.strip(), v.strip()))
-    return pairs
-
-
-def extract_table_rows(lines, max_rows=6):
-    table_lines = []
-    started = False
-    for line in lines:
-        if is_markdown_table_line(line):
-            table_lines.append(line)
-            started = True
-        elif started:
-            break
-    if len(table_lines) >= 2:
-        rows = parse_markdown_table(table_lines)
-        return rows[: max_rows + 1]
-    return []
-
-
 # ---------- HTML BODY ----------
 def esc(text: str) -> str:
     text = clean_md_inline(text)
@@ -432,13 +538,9 @@ def render_action_snapshot(lines):
 
     for line in lines:
         s = line.strip()
-        if not s or re.match(r"^##\s+2\.", s):
+        if not s or re.match(r"^##\s+\d+\.", s):
             continue
         if s.startswith("### "):
-            # stop before compact position changes table block to keep summary clean
-            if "Compact position changes" in s:
-                flush()
-                break
             flush()
             current_header = clean_md_inline(s[4:])
             current_items = []
@@ -462,13 +564,13 @@ def render_summary_pairs(lines):
     return "".join(chips), "".join(body)
 
 
-def render_html_table(rows, title, fill="#fff4e5"):
+def render_html_table(rows, title, header_fill="#FFF4E5"):
     if not rows or len(rows) < 2:
         return ""
     headers = rows[0]
     body = rows[1:]
     thead = "".join(
-        f"<th style='text-align:left;padding:8px 10px;border-bottom:1px solid #d9e2f0;background:{fill};font-size:13px;'>{esc(h)}</th>"
+        f"<th style='text-align:left;padding:8px 10px;border-bottom:1px solid #d9e2f0;background:{header_fill};font-size:13px;'>{esc(h)}</th>"
         for h in headers
     )
     body_html = ""
@@ -491,18 +593,21 @@ def render_html_table(rows, title, fill="#fff4e5"):
 
 
 def build_email_body_html(md_text: str, report_date_str: str) -> str:
-    summary = extract_section(md_text, "## 1. ✅ Executive summary")
-    snapshot = extract_section(md_text, "## 2. 📌 Portfolio action snapshot")
-    radar = extract_section(md_text, "## 4. 🚀 Structural Opportunity Radar")
-    risks = extract_section(md_text, "## 5. 📅 Key risks / invalidators")
-    bottom = extract_section(md_text, "## 6. 🧭 Bottom line")
-    state_after = extract_section(md_text, "## 14. 💼 Portfolio state after implementation")
+    summary = extract_section(md_text, "Executive summary")
+    snapshot = extract_section(md_text, "Portfolio action snapshot")
+    radar = extract_section(md_text, "Structural Opportunity Radar")
+    risks = extract_section(md_text, "Key risks / invalidators")
+    bottom = extract_section(md_text, "Bottom line")
+    equity = extract_section(md_text, "Equity curve and portfolio development")
 
     chips_html, summary_body = render_summary_pairs(summary)
     snapshot_html = render_action_snapshot(snapshot)
-
-    radar_table = extract_table_rows(radar, max_rows=5)
-    state_table = extract_table_rows(state_after, max_rows=10)
+    radar_table = extract_table_rows(radar, max_rows=4)
+    equity_pairs = extract_label_pairs(equity)
+    equity_body = "".join(
+        f"<div style='margin:0 0 6px 0; line-height:1.45;'><strong>{esc(k)}:</strong> {esc(v)}</div>"
+        for k, v in equity_pairs
+    )
 
     risk_items = extract_bullets(risks)[:5]
     risk_html = "".join(f"<li style='margin:0 0 5px 0;'>{esc(x)}</li>" for x in risk_items)
@@ -510,17 +615,10 @@ def build_email_body_html(md_text: str, report_date_str: str) -> str:
     bottom_items = extract_bullets(bottom)
     bottom_html = "".join(f"<div style='margin:0 0 8px 0; line-height:1.5;'>{esc(x)}</div>" for x in bottom_items)
 
-    state_pairs = extract_label_pairs(state_after)
-    state_footer = "".join(
-        f"<div style='margin:0 0 6px 0;line-height:1.5;'><strong>{esc(k)}:</strong> {esc(v)}</div>"
-        for k, v in state_pairs
-        if k in {"Remaining cash EUR", "Remaining cash %", "Portfolio total value EUR", "FX assumption used"}
-    )
-
     html = f"""
     <html>
       <body style="margin:0;padding:0;background:#f6f8fb;font-family:Calibri,Arial,sans-serif;color:#282828;">
-        <div style="max-width:1040px;margin:0 auto;padding:28px 20px;">
+        <div style="max-width:980px;margin:0 auto;padding:28px 20px;">
           <div style="background:#ffffff;border:1px solid #d9e2f0;border-radius:12px;padding:28px 30px;">
             <div style="font-size:26px;font-weight:700;color:#2F5597;margin-bottom:8px;">
               Weekly Report Review {report_date_str}
@@ -532,31 +630,32 @@ def build_email_body_html(md_text: str, report_date_str: str) -> str:
             <div style="margin-bottom:16px;">{chips_html}</div>
             <div style="margin-bottom:18px;">{summary_body}</div>
 
-            <div style="display:grid;grid-template-columns:1.15fr 0.85fr;gap:18px;">
+            <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:18px;">
               <div style="background:#fafcff;border:1px solid #e3eaf5;border-radius:10px;padding:16px;">
                 <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Portfolio action snapshot</div>
                 {snapshot_html}
               </div>
               <div style="background:#fafcff;border:1px solid #e3eaf5;border-radius:10px;padding:16px;">
-                <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Top risks this week</div>
-                <ul style="margin:0 0 0 18px;padding:0;line-height:1.5;">{risk_html}</ul>
+                <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Equity curve summary</div>
+                {equity_body}
               </div>
             </div>
 
-            {render_html_table(radar_table, "Structural Opportunity Radar — client view", fill="#fff4e5")}
-            {render_html_table(state_table, "Portfolio state after implementation — holdings", fill="#eaf4ea")}
+            {render_html_table(radar_table, "Structural Opportunity Radar — client view")}
 
-            <div style="margin-top:10px;font-size:13px;color:#555555;line-height:1.5;">
-              {state_footer}
-            </div>
-
-            <div style="margin-top:24px;padding:16px;border:1px solid #e3eaf5;border-radius:10px;background:#fcfdff;">
-              <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Bottom line</div>
-              {bottom_html}
+            <div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+              <div style="background:#fafcff;border:1px solid #e3eaf5;border-radius:10px;padding:16px;">
+                <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Top risks this week</div>
+                <ul style="margin:0 0 0 18px;padding:0;line-height:1.5;">{risk_html}</ul>
+              </div>
+              <div style="background:#fcfdff;border:1px solid #e3eaf5;border-radius:10px;padding:16px;">
+                <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Bottom line</div>
+                {bottom_html}
+              </div>
             </div>
 
             <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e6ecf5;color:#555555;font-size:13px;line-height:1.5;">
-              This email is the client-facing summary. The attached Word report contains the full analyst layer, including scorecards, second-order effects, structural radar, executed position changes, carry-forward input, and the full disclaimer.
+              The attached Word report contains the full analyst layer, the position changes executed this run, the current holdings and cash breakdown, the carry-forward input block, and the equity-curve chart.
             </div>
           </div>
         </div>
@@ -566,66 +665,24 @@ def build_email_body_html(md_text: str, report_date_str: str) -> str:
     return html.strip()
 
 
-# ---------- REPORT FILE HELPERS ----------
-REPORT_RE = re.compile(r"^weekly_analysis_(\d{6})(?:_(\d{2}))?\.md$")
-
-
-@dataclass(order=True)
-class ReportKey:
-    date_part: str
-    version_part: int
-    path: Path
-
-
-def parse_report_key(path: Path):
-    m = REPORT_RE.match(path.name)
-    if not m:
-        return None
-    date_part = m.group(1)
-    version_part = int(m.group(2) or "0")
-    return ReportKey(date_part, version_part, path)
-
-
-def get_latest_report(output_dir: Path) -> Path:
-    keys = []
-    for path in output_dir.glob("weekly_analysis_*.md"):
-        key = parse_report_key(path)
-        if key:
-            keys.append(key)
-    if not keys:
-        raise FileNotFoundError("No weekly_analysis_*.md file found in output/")
-    return sorted(keys)[-1].path
-
-
-def extract_report_date(md_text: str, fallback: str) -> str:
-    for line in md_text.splitlines():
-        line = line.strip()
-        m = re.match(r"^#\s+Weekly Report Review\s+(\d{4}-\d{2}-\d{2})$", line)
-        if m:
-            return m.group(1)
-    return fallback
-
-
-def attachment_base_name(report_date_str: str) -> str:
-    return f"weekly_report_review_{report_date_str}"
-
-
 # ---------- MAIN ----------
 def main():
     output_dir = Path("output")
-    latest_report = get_latest_report(output_dir)
-
+    latest_report = latest_report_file(output_dir)
     original_md_text = latest_report.read_text(encoding="utf-8")
     md_text_clean = strip_citations(original_md_text)
 
-    report_date_str = extract_report_date(md_text_clean, datetime.now().strftime("%Y-%m-%d"))
-    base_name = attachment_base_name(report_date_str)
+    report_date_str = parse_report_date(md_text_clean)
+    safe_stem = latest_report.stem
 
-    clean_md_path = latest_report.with_name(f"{base_name}.md")
+    clean_md_path = latest_report.with_name(f"{safe_stem}_clean.md")
     clean_md_path.write_text(md_text_clean, encoding="utf-8")
 
-    docx_path = latest_report.with_name(f"{base_name}.docx")
-    build_docx_from_markdown(md_text_clean, docx_path)
+    equity_curve_png = latest_report.with_name(f"{safe_stem}_equity_curve.png")
+    create_equity_curve_png(output_dir, equity_curve_png)
+
+    docx_path = latest_report.with_name(f"{safe_stem}.docx")
+    build_docx_from_markdown(md_text_clean, docx_path, equity_curve_png if equity_curve_png.exists() else None)
 
     subject = f"Weekly Report Review {report_date_str}"
     html_body = build_email_body_html(md_text_clean, report_date_str)
@@ -665,14 +722,25 @@ def main():
         )
         msg.attach(md_attachment)
 
+    if equity_curve_png.exists():
+        with open(equity_curve_png, "rb") as f:
+            png_attachment = MIMEApplication(f.read(), _subtype="png")
+            png_attachment.add_header(
+                "Content-Disposition",
+                "attachment",
+                filename=equity_curve_png.name,
+            )
+            msg.attach(png_attachment)
+
     with smtplib.SMTP(smtp_host, smtp_port) as server:
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.sendmail(mail_from, [mail_to], msg.as_string())
 
     print(
-        f"Sent email for {latest_report.name} with attachment {docx_path.name} "
-        f"and clean markdown export {clean_md_path.name}"
+        f"Sent email for {latest_report.name} with attachments "
+        f"{docx_path.name}, {clean_md_path.name}"
+        + (f", {equity_curve_png.name}" if equity_curve_png.exists() else "")
     )
 
 
