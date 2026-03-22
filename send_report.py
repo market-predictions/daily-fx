@@ -9,6 +9,8 @@ from email.mime.application import MIMEApplication
 from email.mime.image import MIMEImage
 from collections import OrderedDict
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import mistune
 from docx import Document
