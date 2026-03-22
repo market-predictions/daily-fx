@@ -1,5 +1,5 @@
 
-# Masterprompt V12 - Weekly IBKR ETF Portfolio Review
+# Masterprompt V13 - Weekly IBKR ETF Portfolio Review
 
 -- READ THIS DOCUMENT COMPLETELY BEFORE YOU TAKE ACTION !!! --
 -- DO NOT SKIP SECTIONS. DO NOT STOP EARLY. DO NOT ASK FOR MANUAL PORTFOLIO INPUT IF A PRIOR REPORT EXISTS. --
@@ -177,6 +177,8 @@ Write in a way that supports a clean executive email:
 - no unnecessary placeholder language such as "Suggested visual treatment"
 - no visual clutter caused by too many colored pills, soft badges, or app-like UI elements
 - no cheap or playful icon use inside the body
+- no repeated decorative section headers where the body already makes the section purpose obvious
+- no large analyst blocks that rely only on paragraph flow to separate one ticker or idea from the next
 - no long unbroken walls of bullets when a compact table would communicate better
 - no excessive subheading variation that creates visual noise without adding hierarchy
 
@@ -187,16 +189,32 @@ Write in a way that supports premium HTML/PDF rendering:
 - Keep action lists tight; do not flood the action snapshot with long bullets.
 - Use short label-value lines where the structure asks for them.
 - Keep tables compact, complete, and cleanly formatted.
+- Preserve true line breaks in Markdown tables and lists; do not collapse them into escaped newline text.
 - Avoid unnecessary filler sentences before the main conclusion.
 - Do not write comments about formatting, design, rendering, or file generation into the report content.
 - Prefer concise paragraphs over long narrative blocks.
 - Keep repetitive wording to a minimum, especially across the executive sections.
 - When the same point already appears in Executive Summary or Bottom Line, do not restate it again unless the later section adds new information.
 
+## Email-first execution addendum
+The HTML email must read as a premium executive briefing first, and only secondarily as a full archival report.
+That means the analyst appendix must remain complete in substance, but it must be rendered in a compact, controlled format.
+
+The delivery layer should therefore prefer:
+- compact summary cards at the top
+- table-first rendering where possible
+- clear visual separation between one ticker and the next
+- one consistent heading hierarchy
+- reduced decorative variation in the analyst appendix
+- minimal vertical waste
+
+Do not design the email as a long scrolling analyst memo with lightly styled markdown pasted into a card shell.
+
 ## Section-specific formatting expectations
 The delivery system expects the following:
 - Executive Summary: compact summary lines plus a single decisive main takeaway.
 - Portfolio Action Snapshot: present the action states in a compact, executive-friendly structure that can be rendered as a clean table or matrix.
+- Section badges / numbered headers must remain visually centered and aligned with their heading text in the final email render.
 - Regime Dashboard: no repeated heading inside the section body.
 - Structural Opportunity Radar: no repeated heading inside the section body.
 - Current Position Review: each ticker block must begin with a clearly identifiable ticker / ETF heading and remain visually distinct from the next ticker.
@@ -205,12 +223,29 @@ The delivery system expects the following:
 - Portfolio Rotation Plan: content must be cleanly renderable as a compact table or matrix instead of a long vertical icon stack.
 - Carry-forward Input for Next Run: preserve the required canonical sentence exactly, but keep the rest structured and table-friendly.
 
+- Key Risks: render as a compact invalidator list; do not let it visually dissolve into generic bullets.
+- Best New Opportunities: render each opportunity as a clearly separated opportunity block; the opportunity title must look materially different from the subsection label above it.
+- Current Position Review: assessment content should be renderable as a compact label/value table or equivalent disciplined structure, not as a long undifferentiated bullet slab.
+- Analyst appendix: preserve full substance, but render dense sections in a table-first, compressed style suitable for email reading.
+- Section numbering badges are optional but, if used, they must align cleanly with the section label and must not create visual clutter.
+
 ## Icon rule
 Icons are optional, not mandatory.
 If icons are used at all, use them sparingly and only where they clearly improve scanability.
 Do not rely on icons to create hierarchy.
 Do not create a different icon treatment for every subsection.
 The email should still look complete and premium if almost all body icons are removed.
+
+
+## Delivery-script expectations
+The downstream HTML renderer should, where possible:
+- normalize subsection labels by removing decorative emojis from internal headings
+- convert portfolio action snapshot into a compact two-column decision table
+- convert portfolio rotation plan into a compact matrix / table
+- convert prospective score into a two-column factor / score table
+- visually separate each current holding review from the next using a distinct heading treatment or card boundary
+- remove raw bracketed labels such as `[Rank #1]` from rendered opportunity titles
+- keep PDF generation aligned with the email system, but allow a print-safe fallback layout when pagination requires it
 
 ## Attachment rule
 The client attachment format is PDF, not DOCX.
