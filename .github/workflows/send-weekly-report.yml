@@ -20,7 +20,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install python-docx
+        run: |
+          python -m pip install --upgrade pip
+          pip install matplotlib mistune python-docx
 
       - name: Send email
         env:
