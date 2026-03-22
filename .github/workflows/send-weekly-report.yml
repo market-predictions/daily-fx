@@ -31,12 +31,35 @@ jobs:
             libffi-dev \
             shared-mime-info \
             fonts-liberation \
-            fonts-dejavu-core
+            fonts-dejavu-core \
+            fonts-lato
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install matplotlib mistune weasyprint
+
+
+      - name: Validate HTML and PDF render
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import send_report
+          latest = send_report.latest_report_file(Path("output"))
+          send_report.generate_delivery_assets(Path("output"), latest)
+          print(f"RENDER_OK | report={latest.name}")
+          PY
+
+      - name: Validate HTML/PDF render before send
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import send_report as sr
+          output_dir = Path("output")
+          latest = sr.latest_report_file(output_dir)
+          sr.generate_delivery_assets(output_dir, latest)
+          print(f"RENDER_OK | report={latest.name}")
+          PY
 
       - name: Send email
         env:
