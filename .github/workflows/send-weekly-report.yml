@@ -30,7 +30,8 @@ jobs:
             libgdk-pixbuf-2.0-0 \
             libffi-dev \
             shared-mime-info \
-            fonts-liberation
+            fonts-liberation \
+            fonts-dejavu-core
 
       - name: Install Python dependencies
         run: |
