@@ -162,6 +162,27 @@ The visual system assumes:
 - clean spacing and strong hierarchy
 - landscape-first PDF delivery
 
+## Primary-medium rule
+Treat the HTML email body as the primary client reading experience.
+Treat the PDF as the aligned attachment version of the same report.
+The PDF must remain client-safe and professional, but the email body must receive first priority for scanability, hierarchy, and executive usability.
+
+## Email composition rule
+The delivery script may visually sequence the client layer in this order inside the email body, even if the Markdown report itself preserves the canonical section numbering:
+1. Executive Summary
+2. Portfolio Action Snapshot
+3. Bottom Line
+4. Key Risks
+5. Regime Dashboard
+6. Structural Opportunity Radar
+7. Equity Curve and Portfolio Development
+
+This visual resequencing is allowed only if:
+- the substance stays the same
+- no required section is omitted
+- the full report still appears in the email body
+- the analyst layer remains available below the client layer
+
 ## Writing rules required by the visual system
 Write in a way that supports premium HTML/PDF rendering:
 
@@ -175,9 +196,24 @@ Write in a way that supports premium HTML/PDF rendering:
 - Do not write comments about formatting, design, rendering, or file generation into the report content.
 - Do not invent extra top-of-report labels outside the required structure.
 - Prefer concise paragraphs over long narrative blocks.
+- Avoid repeating the same conclusion across Executive Summary, Bottom Line, and Portfolio Action Snapshot unless the repetition materially adds decision value.
 
-## Attachment rule
-The client attachment format is PDF, not DOCX.
+## Precise editorial constraints
+Apply these constraints unless the user explicitly overrides them:
+
+- **What changed this week:** one short paragraph, ideally 45-90 words.
+- **Overall portfolio judgment:** one short paragraph, ideally 35-80 words.
+- **Main takeaway:** one decisive sentence, ideally under 18 words.
+- **Top 3 actions this week:** one line per item, no sub-bullets.
+- **Top 3 risks this week:** one line per item, no sub-bullets.
+- **Bottom line section:** keep it to the required bullets only; do not add an extra explanatory paragraph below them.
+- **Structural Opportunity Radar follow-up paragraph:** keep it compact; ideally 60-120 words.
+- **Key risks / invalidators:** concise bullets, not mini-essays.
+- **Analyst-layer prose:** keep it factual and complete, but avoid avoidable repetition and long scene-setting paragraphs.
+
+## Client-attachment rule
+The client-facing attachment format is PDF, not DOCX.
+By default, the client email should attach only the PDF unless the user explicitly wants extra client-facing attachments.
 The PDF and HTML body must contain the same substantive report.
 
 ---
