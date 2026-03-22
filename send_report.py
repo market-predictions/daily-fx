@@ -6,9 +6,11 @@ from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from email.mime.image import MIMEImage
 from collections import OrderedDict
 
 import matplotlib.pyplot as plt
+import mistune
 from docx import Document
 from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -281,26 +283,44 @@ def validate_required_report(md_text: str) -> None:
         raise RuntimeError("Final disclaimer body is missing.")
 
 
-def validate_email_body(html_body: str) -> None:
+
+def html_to_plain_text(html: str) -> str:
+    text = re.sub(r"<style.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<script.*?</script>", " ", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = text.replace("&nbsp;", " ").replace("&amp;", "&")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def heading_text_from_md_heading(heading: str) -> str:
+    heading = re.sub(r"^##\s+\d+\.\s+", "", heading).strip()
+    return clean_md_inline(heading)
+
+
+def validate_email_body(html_body: str, md_text: str = None) -> None:
     required_html_strings = [
+        "Weekly Report Review",
+        "Executive summary",
         "Portfolio action snapshot",
         "Structural Opportunity Radar",
         "Bottom line",
-        "Weekly Report Review",
+        "Current portfolio holdings and cash",
+        "Carry-forward input for next run",
     ]
     for token in required_html_strings:
         if token not in html_body:
             raise RuntimeError(f"HTML email body is missing required content block: {token}")
 
+    if md_text:
+        plain_html = html_to_plain_text(html_body)
+        plain_md = html_to_plain_text(mistune.create_markdown(plugins=['table'])(md_text))
+        if len(plain_html) < 0.80 * len(plain_md):
+            raise RuntimeError("HTML email body appears too short relative to the full report; summary-only body is not allowed.")
 
-def write_delivery_manifest(manifest_path: Path, report_name: str, mail_to: str, attachments: list[str]) -> None:
-    lines = [
-        f"report={report_name}",
-        f"recipient={mail_to}",
-        f"timestamp_utc={datetime.utcnow().isoformat()}Z",
-        "attachments=" + ", ".join(attachments),
-    ]
-    manifest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        for heading in REQUIRED_SECTION_HEADINGS:
+            plain_heading = heading_text_from_md_heading(heading)
+            if plain_heading not in plain_html:
+                raise RuntimeError(f"HTML email body is missing required section heading text: {plain_heading}")
 
 
 # ---------- EQUITY CURVE ----------
@@ -685,77 +705,55 @@ def render_html_table(rows, title, header_fill="#FFF4E5"):
     """
 
 
-def build_email_body_html(md_text: str, report_date_str: str) -> str:
-    summary = extract_section(md_text, "Executive summary")
-    snapshot = extract_section(md_text, "Portfolio action snapshot")
-    radar = extract_section(md_text, "Structural Opportunity Radar")
-    risks = extract_section(md_text, "Key risks / invalidators")
-    bottom = extract_section(md_text, "Bottom line")
-    equity = extract_section(md_text, "Equity curve and portfolio development")
 
-    chips_html, summary_body = render_summary_pairs(summary)
-    snapshot_html = render_action_snapshot(snapshot)
-    radar_table = extract_table_rows(radar, max_rows=4)
-    equity_pairs = extract_label_pairs(equity)
-    equity_body = "".join(
-        f"<div style='margin:0 0 6px 0; line-height:1.45;'><strong>{esc(k)}:</strong> {esc(v)}</div>"
-        for k, v in equity_pairs
-    )
+def build_email_body_html(md_text: str, report_date_str: str, inline_equity_cid: str = None) -> str:
+    md_for_html = md_text
+    if inline_equity_cid and "EQUITY_CURVE_CHART_PLACEHOLDER" in md_for_html:
+        md_for_html = md_for_html.replace(
+            "EQUITY_CURVE_CHART_PLACEHOLDER",
+            f"![Equity curve](cid:{inline_equity_cid})"
+        )
+    else:
+        md_for_html = md_for_html.replace(
+            "EQUITY_CURVE_CHART_PLACEHOLDER",
+            "_Equity curve chart attached separately when available._"
+        )
 
-    risk_items = extract_bullets(risks)[:5]
-    risk_html = "".join(f"<li style='margin:0 0 5px 0;'>{esc(x)}</li>" for x in risk_items)
+    renderer = mistune.create_markdown(plugins=["table"])
+    rendered = renderer(md_for_html)
 
-    bottom_items = extract_bullets(bottom)
-    bottom_html = "".join(f"<div style='margin:0 0 8px 0; line-height:1.5;'>{esc(x)}</div>" for x in bottom_items)
+    css = """
+    body { margin: 0; padding: 0; background: #f6f8fb; font-family: Calibri, Arial, sans-serif; color: #282828; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px; }
+    .card { background: #ffffff; border: 1px solid #d9e2f0; border-radius: 12px; padding: 28px 32px; }
+    h1 { color: #2F5597; font-size: 28px; margin: 0 0 12px 0; }
+    h2 { color: #2F5597; font-size: 21px; margin: 24px 0 10px 0; border-top: 1px solid #eef2f7; padding-top: 18px; }
+    h3 { color: #1F4E79; font-size: 16px; margin: 18px 0 8px 0; }
+    p, li { font-size: 14px; line-height: 1.55; }
+    blockquote { margin: 0 0 18px 0; padding: 10px 12px; background: #f3f4f6; border-left: 4px solid #d9e2f0; color: #555555; }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 18px 0; }
+    th { text-align: left; padding: 8px 10px; border-bottom: 1px solid #d9e2f0; background: #d9eaf7; font-size: 13px; }
+    td { padding: 8px 10px; border-bottom: 1px solid #eef2f7; font-size: 13px; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafcff; }
+    code { background: #f3f4f6; padding: 1px 4px; border-radius: 4px; }
+    img { max-width: 100%; height: auto; border: 1px solid #d9e2f0; border-radius: 8px; margin: 10px 0 18px 0; }
+    """
 
-    html = f"""
+    return f"""
     <html>
-      <body style="margin:0;padding:0;background:#f6f8fb;font-family:Calibri,Arial,sans-serif;color:#282828;">
-        <div style="max-width:980px;margin:0 auto;padding:28px 20px;">
-          <div style="background:#ffffff;border:1px solid #d9e2f0;border-radius:12px;padding:28px 30px;">
-            <div style="font-size:26px;font-weight:700;color:#2F5597;margin-bottom:8px;">
-              Weekly Report Review {report_date_str}
-            </div>
-            <div style="font-size:13px;color:#666666;margin-bottom:18px;padding:8px 10px;background:#f3f4f6;border-radius:6px;">
-              This report is for informational and educational purposes only; please see the disclaimer in the attached report.
-            </div>
-
-            <div style="margin-bottom:16px;">{chips_html}</div>
-            <div style="margin-bottom:18px;">{summary_body}</div>
-
-            <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:18px;">
-              <div style="background:#fafcff;border:1px solid #e3eaf5;border-radius:10px;padding:16px;">
-                <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Portfolio action snapshot</div>
-                {snapshot_html}
-              </div>
-              <div style="background:#fafcff;border:1px solid #e3eaf5;border-radius:10px;padding:16px;">
-                <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Equity curve summary</div>
-                {equity_body}
-              </div>
-            </div>
-
-            {render_html_table(radar_table, "Structural Opportunity Radar — client view")}
-
-            <div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px;">
-              <div style="background:#fafcff;border:1px solid #e3eaf5;border-radius:10px;padding:16px;">
-                <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Top risks this week</div>
-                <ul style="margin:0 0 0 18px;padding:0;line-height:1.5;">{risk_html}</ul>
-              </div>
-              <div style="background:#fcfdff;border:1px solid #e3eaf5;border-radius:10px;padding:16px;">
-                <div style="font-size:18px;font-weight:700;color:#2F5597;margin-bottom:10px;">Bottom line</div>
-                {bottom_html}
-              </div>
-            </div>
-
-            <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e6ecf5;color:#555555;font-size:13px;line-height:1.5;">
-              The attached Word report contains the full analyst layer, the position changes executed this run, the current holdings and cash breakdown, the carry-forward input block, and the equity-curve chart.
-            </div>
+      <head>
+        <meta charset="utf-8" />
+        <style>{css}</style>
+      </head>
+      <body>
+        <div class="wrap">
+          <div class="card">
+            {rendered}
           </div>
         </div>
       </body>
     </html>
-    """
-    return html.strip()
+    """.strip()
 
 
 # ---------- MAIN ----------
@@ -778,10 +776,11 @@ def main():
     build_docx_from_markdown(md_text_clean, docx_path, equity_curve_png if equity_curve_png.exists() else None)
 
     subject = f"Weekly Report Review {report_date_str}"
-    html_body = build_email_body_html(md_text_clean, report_date_str)
+    inline_equity_cid = "equitycurve"
+    html_body = build_email_body_html(md_text_clean, report_date_str, inline_equity_cid if equity_curve_png.exists() else None)
 
     validate_required_report(md_text_clean)
-    validate_email_body(html_body)
+    validate_email_body(html_body, md_text_clean)
 
     smtp_host = require_env("MRKT_RPRTS_SMTP_HOST")
     smtp_port = int(os.environ.get("MRKT_RPRTS_SMTP_PORT") or "587")
@@ -790,8 +789,13 @@ def main():
     mail_from = require_env("MRKT_RPRTS_MAIL_FROM")
     mail_to = REQUIRED_MAIL_TO
 
+    if mail_to != REQUIRED_MAIL_TO:
+        raise RuntimeError(f"Recipient mismatch: expected {REQUIRED_MAIL_TO}, got {mail_to}")
+
     if not docx_path.exists():
         raise RuntimeError(f"DOCX attachment was not created: {docx_path}")
+    if docx_path.stat().st_size <= 0:
+        raise RuntimeError(f"DOCX attachment is empty: {docx_path}")
 
     msg = MIMEMultipart()
     msg["Subject"] = subject
@@ -825,13 +829,20 @@ def main():
 
     if equity_curve_png.exists():
         with open(equity_curve_png, "rb") as f:
-            png_attachment = MIMEApplication(f.read(), _subtype="png")
-            png_attachment.add_header(
-                "Content-Disposition",
-                "attachment",
-                filename=equity_curve_png.name,
-            )
-            msg.attach(png_attachment)
+            png_bytes = f.read()
+
+        inline_png = MIMEImage(png_bytes, _subtype="png")
+        inline_png.add_header("Content-ID", "<equitycurve>")
+        inline_png.add_header("Content-Disposition", "inline", filename=equity_curve_png.name)
+        msg.attach(inline_png)
+
+        png_attachment = MIMEApplication(png_bytes, _subtype="png")
+        png_attachment.add_header(
+            "Content-Disposition",
+            "attachment",
+            filename=equity_curve_png.name,
+        )
+        msg.attach(png_attachment)
         attachments.append(equity_curve_png.name)
 
     with smtplib.SMTP(smtp_host, smtp_port) as server:
@@ -842,10 +853,12 @@ def main():
     manifest_path = latest_report.with_name(f"{safe_stem}_delivery_manifest.txt")
     write_delivery_manifest(manifest_path, latest_report.name, mail_to, attachments)
 
-    print(
-        f"Sent email for {latest_report.name} to {mail_to} with attachments "
-        f"{', '.join(attachments)} and wrote manifest {manifest_path.name}"
+    receipt = (
+        f"DELIVERY_OK | report={latest_report.name} | recipient={mail_to} | "
+        f"html_body=full_report | docx_attached=yes | manifest={manifest_path.name} | "
+        f"attachments={', '.join(attachments)}"
     )
+    print(receipt)
 
 
 if __name__ == "__main__":
