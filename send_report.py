@@ -140,7 +140,16 @@ def require_env(name: str) -> str:
     return value
 
 
+def normalize_markdown_text(text: str) -> str:
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    # Defensive normalization for reports accidentally persisted with escaped newlines.
+    if "\\n" in text or "\\t" in text:
+        text = text.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", "\t")
+    return text
+
+
 def strip_citations(text: str) -> str:
+    text = normalize_markdown_text(text)
     patterns = [
         r"cite.*?",
         r"filecite.*?",
@@ -371,6 +380,10 @@ def validate_email_body(html_body: str, md_text: str | None = None) -> None:
             if plain_heading not in plain_html:
                 raise RuntimeError(f"HTML body is missing required section heading text: {plain_heading}")
 
+        for bad_token in ["\\n", "#### ", "|---|", "\\t"]:
+            if bad_token in html_body:
+                raise RuntimeError(f"HTML body still contains raw markdown / escaped formatting token: {bad_token}")
+
 
 def write_delivery_manifest(manifest_path: Path, report_name: str, recipient: str, attachments: list[str]) -> None:
     timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -415,43 +428,77 @@ def create_equity_curve_png(output_dir: Path, chart_path: Path):
 
 
 # ---------- MARKDOWN -> BRANDED HTML ----------
+
+def normalize_subheader(text: str) -> str:
+    text = clean_md_inline(text)
+    text = re.sub(r"^[^\w]+", "", text).strip()
+    return text
+
+
 def preprocess_markdown_block(text: str, image_src: str | None = None) -> str:
+    text = normalize_markdown_text(text)
     lines = text.splitlines()
-    processed = []
+    processed: list[str] = []
     i = 0
+
+    def ensure_blank() -> None:
+        if processed and processed[-1] != "":
+            processed.append("")
+
+    def append_line(value: str, *, before_blank: bool = False) -> None:
+        if before_blank:
+            ensure_blank()
+        processed.append(value)
 
     while i < len(lines):
         line = lines[i]
         stripped = clean_md_inline(line.strip())
+        lstripped = line.lstrip()
+
+        if stripped == "":
+            if processed and processed[-1] != "":
+                processed.append("")
+            i += 1
+            continue
 
         if stripped == "EQUITY_CURVE_CHART_PLACEHOLDER":
+            ensure_blank()
             if image_src:
                 processed.append(f"![Equity curve]({image_src})")
             else:
                 processed.append("_Equity curve chart unavailable for this delivery._")
+            processed.append("")
             i += 1
             continue
 
-        if line.lstrip().startswith("### [Rank #"):
-            rank_line = clean_md_inline(line.lstrip()[4:])
-            rank_line = rank_line.replace("[", "").replace("]", "")
-            processed.append(f"### {rank_line}")
+        rank_match = re.match(r"###\s+\[Rank\s+#(\d+)\]\s+(.*)$", lstripped, flags=re.I)
+        if rank_match:
+            title = clean_md_inline(rank_match.group(2))
+            append_line(f"### {rank_match.group(1)}. {title}", before_blank=True)
+            processed.append("")
             i += 1
             continue
 
-        is_heading = line.lstrip().startswith("#")
-        is_bullet = line.lstrip().startswith("- ") or bool(re.match(r"^\d+\.\s+", line.lstrip()))
+        is_heading = lstripped.startswith("#")
+        is_bullet = lstripped.startswith("- ") or bool(re.match(r"^\d+\.\s+", lstripped))
         is_table = is_markdown_table_line(line)
+
+        if stripped in {"A. Macro-derived opportunities", "B. Structural opportunities"} and lstripped.startswith("### "):
+            append_line(f"#### {stripped}", before_blank=True)
+            processed.append("")
+            i += 1
+            continue
 
         if stripped == "Prospective score":
             rows = []
             j = i + 1
             while j < len(lines):
-                nxt = lines[j].strip()
+                nxt_raw = lines[j]
+                nxt = nxt_raw.strip()
                 if not nxt:
                     j += 1
                     continue
-                if nxt.startswith("#") or nxt.startswith("### ") or nxt.startswith("#### ") or is_markdown_table_line(nxt):
+                if nxt.startswith("#") or nxt.startswith("### ") or nxt.startswith("#### ") or is_markdown_table_line(nxt_raw):
                     break
                 if nxt.startswith("- ") and ":" in nxt:
                     k, v = clean_md_inline(nxt[2:]).split(":", 1)
@@ -459,22 +506,41 @@ def preprocess_markdown_block(text: str, image_src: str | None = None) -> str:
                     j += 1
                     continue
                 break
-            processed.append("#### Prospective score")
+            append_line("#### Prospective score", before_blank=True)
             if rows:
+                processed.append("")
                 processed.append("| Factor | Score |")
                 processed.append("|---|---:|")
                 for k, v in rows:
                     processed.append(f"| {k} | {v} |")
+                processed.append("")
             i = j
             continue
 
+        if is_table:
+            prev_nonblank = next((ln for ln in reversed(processed) if ln != ""), "")
+            if prev_nonblank and not is_markdown_table_line(prev_nonblank):
+                processed.append("")
+            processed.append(lstripped)
+            i += 1
+            continue
+
         if stripped in PLAIN_SUBHEADERS and not is_heading and not is_bullet and not is_table:
-            processed.append(f"#### {stripped}")
+            append_line(f"#### {stripped}", before_blank=True)
+            processed.append("")
         else:
-            processed.append(line)
+            if is_heading:
+                append_line(lstripped, before_blank=True)
+                processed.append("")
+            else:
+                processed.append(line)
         i += 1
 
-    return "\\n".join(processed)
+    while processed and processed[-1] == "":
+        processed.pop()
+
+    return "\n".join(processed)
+
 
 def render_markdown_block(text: str, image_src: str | None = None) -> str:
     md = preprocess_markdown_block(strip_citations(text), image_src=image_src)
@@ -502,11 +568,12 @@ def action_tone(header: str):
 
 def section_header_html(number: int, title: str) -> str:
     return (
-        f"<div class='section-kicker'>"
-        f"<span class='section-badge'>{number}</span>"
-        f"<span class='section-label'>{esc(title)}</span>"
-        f"</div>"
+        "<table class='section-kicker' role='presentation' cellpadding='0' cellspacing='0'><tr>"
+        f"<td class='section-badge-cell'><span class='section-badge'>{number}</span></td>"
+        f"<td class='section-label-cell'><span class='section-label'>{esc(title)}</span></td>"
+        "</tr></table>"
     )
+
 
 
 
@@ -518,7 +585,7 @@ def parse_subsections(lines):
         if not stripped:
             continue
         if stripped.startswith("### "):
-            current_header = clean_md_inline(stripped[4:])
+            current_header = normalize_subheader(stripped[4:])
             groups[current_header] = []
         elif stripped.startswith("- "):
             if current_header is None:
@@ -536,6 +603,23 @@ def parse_subsections(lines):
                 groups[current_header] = []
             groups[current_header].append(clean_md_inline(stripped))
     return groups
+
+
+def split_h3_blocks(lines):
+    blocks = []
+    current = None
+    for raw in lines:
+        stripped = raw.strip()
+        if stripped.startswith("### "):
+            if current:
+                blocks.append(current)
+            current = {"title": clean_md_inline(stripped[4:]), "lines": []}
+        elif current is not None:
+            current["lines"].append(raw)
+    if current:
+        blocks.append(current)
+    return blocks
+
 
 
 def render_executive_summary(section: dict) -> str:
@@ -571,12 +655,12 @@ def render_action_snapshot(section: dict) -> str:
     order = ["Add", "Hold", "Hold but replaceable", "Reduce", "Close"]
     rows = []
     for label in order:
-        items = groups.get(label, [])
+        items = groups.get(label, groups.get(normalize_subheader(label), []))
         val = ", ".join(items) if items else "None"
         rows.append(f"<tr><th>{esc(label)}</th><td>{esc(val)}</td></tr>")
 
     def block(title):
-        items = groups.get(title, [])
+        items = groups.get(title, groups.get(normalize_subheader(title), []))
         if not items:
             return ""
         list_html = "".join(f"<li>{esc(item)}</li>" for item in items)
@@ -616,13 +700,73 @@ def render_standard_panel(section: dict, image_src: str | None = None, extra_cla
     )
 
 
+def render_position_review(section: dict) -> str:
+    blocks = split_h3_blocks(section["lines"])
+    cards = []
+    for block in blocks:
+        score_lines = []
+        assess_lines = []
+        current_mode = None
+        for raw in block["lines"]:
+            stripped = clean_md_inline(raw.strip())
+            if not stripped:
+                continue
+            if stripped == "Scorecard":
+                current_mode = "score"
+                continue
+            if stripped == "Assessment":
+                current_mode = "assessment"
+                continue
+            if current_mode == "score":
+                score_lines.append(raw)
+            elif current_mode == "assessment":
+                assess_lines.append(raw)
+
+        score_html = render_markdown_block("\n".join(score_lines)) if score_lines else ""
+        assessment_pairs = extract_label_pairs(assess_lines)
+        if assessment_pairs:
+            assess_rows = "".join(
+                f"<tr><th>{esc(k)}</th><td>{esc(v)}</td></tr>" for k, v in assessment_pairs
+            )
+            assessment_html = f"<table class='assessment-table'><tbody>{assess_rows}</tbody></table>"
+        else:
+            assessment_html = render_markdown_block("\n".join(assess_lines)) if assess_lines else ""
+
+        cards.append(
+            f"<article class='position-card'>"
+            f"<div class='position-card-title'>{esc(block['title'])}</div>"
+            f"<div class='position-card-grid'>"
+            f"<div class='position-score'>{score_html}</div>"
+            f"<div class='position-assessment'>{assessment_html}</div>"
+            f"</div>"
+            f"</article>"
+        )
+
+    return (
+        f"<div class='panel panel-positions'>"
+        f"{section_header_html(section['number'], section['title'])}"
+        f"{''.join(cards)}"
+        f"</div>"
+    )
+
+
+def render_best_opportunities(section: dict) -> str:
+    body = render_markdown_block("\n".join(section["lines"]))
+    return (
+        f"<div class='panel panel-opportunities'>"
+        f"{section_header_html(section['number'], section['title'])}"
+        f"{body}"
+        f"</div>"
+    )
+
+
 def render_rotation_plan(section: dict) -> str:
     groups = parse_subsections(section["lines"])
     cols = ["Close", "Reduce", "Hold", "Add", "Replace"]
     heads = "".join(f"<th>{esc(col)}</th>" for col in cols)
     cells = []
     for col in cols:
-        items = groups.get(col, [])
+        items = groups.get(col, groups.get(normalize_subheader(col), []))
         if items:
             content = "<ul>" + "".join(f"<li>{esc(item)}</li>" for item in items) + "</ul>"
         else:
@@ -683,9 +827,9 @@ def build_report_html(
             continue
         section = sections_by_number[number]
         if number == 10:
-            analyst_panels.append(render_standard_panel(section, extra_class="panel-positions"))
+            analyst_panels.append(render_position_review(section))
         elif number == 11:
-            analyst_panels.append(render_standard_panel(section, extra_class="panel-opportunities"))
+            analyst_panels.append(render_best_opportunities(section))
         elif number == 12:
             analyst_panels.append(render_rotation_plan(section))
         elif number == 16:
@@ -706,26 +850,26 @@ def build_report_html(
       -webkit-font-smoothing: antialiased;
     }}
     .report-shell {{
-      max-width: 1320px;
+      max-width: 1180px;
       margin: 0 auto;
       padding: 0 0 18px 0;
     }}
     .hero {{
       background: {BRAND['header']};
       color: {BRAND['header_text']};
-      padding: 24px 30px 22px 30px;
+      padding: 20px 24px 18px 24px;
       border-radius: 14px 14px 0 0;
     }}
     .masthead {{
       font-family: Georgia, "Times New Roman", serif;
       font-weight: 700;
-      font-size: 28px;
+      font-size: 30px;
       letter-spacing: 1px;
       margin: 0 0 8px 0;
       text-transform: uppercase;
     }}
     .hero-sub {{
-      font-size: 15px;
+      font-size: 14px;
       color: #EFF4F6;
       margin: 0;
     }}
@@ -741,7 +885,7 @@ def build_report_html(
       color: {BRAND['muted']};
       border-radius: 14px;
       padding: 12px 16px;
-      font-size: 13px;
+      font-size: 12px;
       margin: 0 0 18px 0;
     }}
     .summary-strip {{
@@ -782,7 +926,7 @@ def build_report_html(
       background: {BRAND['surface']};
       border: 1px solid {BRAND['border']};
       border-radius: 18px;
-      padding: 18px 20px;
+      padding: 16px 18px;
       margin: 0 0 18px 0;
     }}
     .panel-compact,
@@ -795,7 +939,7 @@ def build_report_html(
     .section-kicker {{
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       margin: 0 0 18px 0;
     }}
     .section-badge {{
@@ -819,7 +963,7 @@ def build_report_html(
       text-transform: uppercase;
       color: {BRAND['muted']};
       line-height: 1;
-      transform: translateY(1px);
+      transform: none;
     }}
     .summary-line {{
       margin: 0 0 12px 0;
@@ -836,7 +980,7 @@ def build_report_html(
     }}
     .summary-value {{
       color: {BRAND['ink']};
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1.55;
     }}
     .takeaway {{
@@ -856,7 +1000,7 @@ def build_report_html(
     }}
     .takeaway-text {{
       color: {BRAND['ink']};
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 700;
       line-height: 1.42;
     }}
@@ -897,7 +1041,7 @@ def build_report_html(
     }}
     .subgrid {{
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 14px;
     }}
     .subblock {{
@@ -923,6 +1067,10 @@ def build_report_html(
       font-size: 14px;
       line-height: 1.58;
       margin-top: 0;
+      font-weight: 400;
+    }}
+    .panel strong {{
+      font-weight: 700;
     }}
     .panel ul, .panel ol {{
       margin-top: 0;
@@ -1181,7 +1329,7 @@ def create_pdf_from_html(html: str, output_path: Path, fallback_html: str | None
 
 # ---------- DELIVERY ASSETS ----------
 def generate_delivery_assets(output_dir: Path, report_path: Path):
-    original_md_text = report_path.read_text(encoding="utf-8")
+    original_md_text = normalize_markdown_text(report_path.read_text(encoding="utf-8"))
     md_text_clean = strip_citations(original_md_text)
     validate_required_report(md_text_clean)
 
