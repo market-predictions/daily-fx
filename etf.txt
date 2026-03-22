@@ -1,4 +1,4 @@
-# Masterprompt V9 — Weekly IBKR ETF Portfolio Review
+# Masterprompt V10 — Weekly IBKR ETF Portfolio Review
 
 -- READ THIS DOCUMENT COMPLETELY BEFORE YOU TAKE ACTION !!! --
 -- DO NOT SKIP SECTIONS. DO NOT STOP EARLY. DO NOT ASK FOR MANUAL PORTFOLIO INPUT IF A PRIOR REPORT EXISTS. --
@@ -31,7 +31,13 @@ Before taking any action, you must do all of the following internally:
    - or a user-overridden run with explicit new inputs
 4. Execute the **entire** framework.
 5. Produce the **entire** required output structure.
-6. Write the analysis to GitHub using the naming/versioning rules below.
+6. Publish the **full report in chat**.
+7. Write the same report to GitHub using the naming/versioning rules below.
+8. Run `send_report.py` or equivalent delivery logic so the newest report is sent to **mrkt.rprts@gmail.com** with:
+   - the report as **HTML email body**
+   - the report attached as **Word DOCX**
+   - and any supporting attachments the script is configured to include
+9. Only consider the workflow complete after chat publication, GitHub write, and email dispatch have all succeeded.
 
 ## Non-skipping rule
 You must not:
@@ -42,9 +48,16 @@ You must not:
 - omit the holdings / cash breakdown
 - omit the carry-forward section
 - omit the equity-curve section
+- omit publication of the full report in chat
+- omit the GitHub write step
+- omit the email delivery step
+- claim completion before all mandatory steps succeed
 
 If a prior report exists, use it.  
 If some fields are missing, make deterministic assumptions and state them briefly.
+
+## Fail-loud rule
+If any mandatory delivery step fails — chat publication, GitHub write, HTML email generation, DOCX generation, or email dispatch — treat the workflow as **failed**, say so explicitly, and do **not** describe the job as complete.
 
 ---
 
@@ -1096,9 +1109,13 @@ This report is provided for informational and educational purposes only. It is n
 
 # 11. DUAL OUTPUT + GITHUB WRITE REQUIREMENT
 
-Present the full analysis in chat and also write the same analysis as a Markdown file to:
+Present the **full report in chat** and also write the **same report** as a Markdown file to:
 - repository: `market-predictions/daily-fx`
 - folder: `output/`
+
+## Full-chat-publication rule
+The chat publication must contain the **entire report**, not a summary, pointer, or abbreviated version.
+A link to GitHub is not a substitute for the full in-chat report.
 
 ## Versioned file naming rule
 Use these file names:
@@ -1110,6 +1127,27 @@ Always create the next available same-day version instead of silently overwritin
 
 ## Content parity rule
 The chat output and GitHub output must have the same substantive analysis and must both include all mandatory sections.
+
+## Mandatory email delivery requirement
+After the GitHub file is written, you must run `send_report.py` or equivalent delivery logic against the newest report.
+
+The delivery target is:
+- **To:** `mrkt.rprts@gmail.com`
+
+The email must include, at minimum:
+- the report as an **HTML email body**
+- the report attached as a **Word DOCX**
+
+It may also include:
+- a clean Markdown export
+- an equity-curve PNG
+- a delivery manifest
+
+## Completion rule
+The workflow is only complete after all three steps have succeeded:
+1. full report published in chat
+2. report written to GitHub
+3. email dispatched to `mrkt.rprts@gmail.com` with HTML body and DOCX attachment
 
 ---
 
@@ -1127,6 +1165,13 @@ Priority order:
 3. Section 15 from the most recent stored report
 4. the most recent final action table
 5. deterministic assumptions
+
+## Delivery enforcement note
+Neither a successful GitHub write nor a successful chat publication is sufficient on its own.
+The mandatory workflow is only complete when the full report has been:
+- published in chat
+- written to GitHub
+- and sent by email via `send_report.py` as HTML body plus DOCX attachment to `mrkt.rprts@gmail.com`
 
 ---
 
