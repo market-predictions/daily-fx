@@ -323,6 +323,19 @@ def validate_email_body(html_body: str, md_text: str = None) -> None:
                 raise RuntimeError(f"HTML email body is missing required section heading text: {plain_heading}")
 
 
+def write_delivery_manifest(manifest_path: Path, report_name: str, recipient: str, attachments: list[str]) -> None:
+    timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    lines = [
+        f"timestamp_utc={timestamp}",
+        f"report={report_name}",
+        f"recipient={recipient}",
+        "html_body=full_report",
+        f"docx_attached={'yes' if any(a.lower().endswith('.docx') for a in attachments) else 'no'}",
+        "attachments=" + ", ".join(attachments),
+    ]
+    manifest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 # ---------- EQUITY CURVE ----------
 def create_equity_curve_png(output_dir: Path, chart_path: Path):
     points = []
@@ -787,10 +800,10 @@ def main():
     smtp_user = require_env("MRKT_RPRTS_SMTP_USER")
     smtp_pass = require_env("MRKT_RPRTS_SMTP_PASS")
     mail_from = require_env("MRKT_RPRTS_MAIL_FROM")
+    mail_to_env = os.environ.get("MRKT_RPRTS_MAIL_TO", REQUIRED_MAIL_TO).strip()
+    if mail_to_env != REQUIRED_MAIL_TO:
+        raise RuntimeError(f"Recipient mismatch: expected {REQUIRED_MAIL_TO}, got {mail_to_env}")
     mail_to = REQUIRED_MAIL_TO
-
-    if mail_to != REQUIRED_MAIL_TO:
-        raise RuntimeError(f"Recipient mismatch: expected {REQUIRED_MAIL_TO}, got {mail_to}")
 
     if not docx_path.exists():
         raise RuntimeError(f"DOCX attachment was not created: {docx_path}")
