@@ -1,6 +1,7 @@
 
 import os
 import re
+import base64
 import smtplib
 from pathlib import Path
 from datetime import datetime
@@ -172,16 +173,6 @@ def html_to_plain_text(html: str) -> str:
 def esc(text: str) -> str:
     text = clean_md_inline(text)
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
-def plain_text_from_markdown(md_text: str) -> str:
-    text = strip_citations(md_text)
-    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
-    text = text.replace('**', '').replace('`', '')
-    text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
-    text = re.sub(r'^\|.*\|$', '', text, flags=re.MULTILINE)
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    return text.strip()
 
 
 def is_markdown_table_line(line: str) -> bool:
@@ -580,55 +571,51 @@ def render_standard_panel(section: dict, image_src: str | None = None, extra_cla
     )
 
 
-def build_delivery_html(md_text: str, report_date_str: str, image_src: str | None = None, mode: str = "email") -> str:
+
+def build_report_html(
+    md_text: str,
+    report_date_str: str,
+    image_src: str | None = None,
+    render_mode: str = "email",
+) -> str:
     report_title, sections = extract_sections(md_text)
     sections_by_number = {s["number"]: s for s in sections}
-    exec_pairs = OrderedDict(extract_label_pairs(sections_by_number.get(1, {}).get("lines", [])))
 
+    exec_pairs = OrderedDict(extract_label_pairs(sections_by_number.get(1, {}).get("lines", [])))
     primary_regime = exec_pairs.get("Primary regime", "Pending classification")
     geo_regime = exec_pairs.get("Geopolitical regime", "Pending classification")
-    main_takeaway = exec_pairs.get("Main takeaway", "Pending conclusion")
+    main_takeaway = exec_pairs.get("Main takeaway", "Keep the current allocation disciplined.")
 
     intro_cards = (
         f"<div class='mini-card'><div class='mini-label'>Primary regime</div><div class='mini-value'>{esc(primary_regime)}</div></div>"
         f"<div class='mini-card'><div class='mini-label'>Geopolitical regime</div><div class='mini-value'>{esc(geo_regime)}</div></div>"
-        f"<div class='mini-card mini-card-highlight'><div class='mini-label'>Main takeaway</div><div class='mini-value'>{esc(main_takeaway)}</div></div>"
+        f"<div class='mini-card'><div class='mini-label'>Main takeaway</div><div class='mini-value'>{esc(main_takeaway)}</div></div>"
     )
 
-    def maybe_render(number: int, image: str | None = None, extra_class: str = "") -> str:
-        section = sections_by_number.get(number)
-        if not section:
-            return ""
-        if number == 1:
-            return render_executive_summary(section)
-        if number == 2:
-            return render_action_snapshot(section)
-        if number == 5:
-            return render_risks(section)
-        return render_standard_panel(section, image_src=image, extra_class=extra_class)
+    client_grid = []
+    if 1 in sections_by_number:
+        client_grid.append(render_executive_summary(sections_by_number[1]))
+    if 2 in sections_by_number:
+        client_grid.append(render_action_snapshot(sections_by_number[2]))
+    if 5 in sections_by_number:
+        client_grid.append(render_risks(sections_by_number[5]))
 
-    executive_summary_panel = maybe_render(1)
-    action_snapshot_panel = maybe_render(2)
-    bottom_line_panel = maybe_render(6, extra_class="panel-bottomline")
-    risks_panel = maybe_render(5)
-    regime_panel = maybe_render(3)
-    radar_panel = maybe_render(4)
-    equity_panel = maybe_render(7, image=image_src)
+    client_panels = []
+    for number in [6, 3, 4, 7]:
+        if number in sections_by_number:
+            img_src = image_src if number == 7 else None
+            extra = "panel-compact" if number == 6 else ""
+            client_panels.append(render_standard_panel(sections_by_number[number], image_src=img_src, extra_class=extra))
 
-    appendix_order = list(range(8, 18))
-    appendix_panels = []
-    for number in appendix_order:
-        panel_html = maybe_render(number)
-        if panel_html:
-            appendix_panels.append(panel_html)
+    analyst_panels = []
+    for number in range(8, 18):
+        if number in sections_by_number:
+            analyst_panels.append(render_standard_panel(sections_by_number[number]))
 
-    shell_width = "1120px" if mode == "email" else "1480px"
-    hero_pad = "30px 32px 24px 32px" if mode == "email" else "26px 30px 22px 30px"
-    page_css = "@page { size: A4 landscape; margin: 14mm; }" if mode == "pdf" else ""
-
-    css = f"""
-    {page_css}
-    * {{ box-sizing: border-box; }}
+    css_common = f"""
+    * {{
+      box-sizing: border-box;
+    }}
     body {{
       margin: 0;
       padding: 0;
@@ -638,57 +625,51 @@ def build_delivery_html(md_text: str, report_date_str: str, image_src: str | Non
       -webkit-font-smoothing: antialiased;
     }}
     .report-shell {{
-      max-width: {shell_width};
+      max-width: 1480px;
       margin: 0 auto;
-      padding: 14px;
+      padding: 0 0 18px 0;
     }}
     .hero {{
       background: {BRAND['header']};
       color: {BRAND['header_text']};
-      padding: {hero_pad};
-      border-radius: 18px 18px 0 0;
+      padding: 24px 28px 20px 28px;
+      border-radius: 14px 14px 0 0;
       display: flex;
       justify-content: space-between;
-      gap: 28px;
+      gap: 24px;
       align-items: flex-start;
     }}
     .masthead {{
       font-family: Georgia, "Times New Roman", serif;
       font-weight: 700;
-      font-size: 32px;
-      letter-spacing: 1.25px;
-      margin: 0 0 10px 0;
+      font-size: 28px;
+      letter-spacing: 1px;
+      margin: 0 0 8px 0;
       text-transform: uppercase;
-      line-height: 1.05;
     }}
     .hero-sub {{
-      font-size: 15px;
-      color: #F2F6F7;
+      font-size: 14px;
+      color: #EFF4F6;
       margin: 0;
-      max-width: 760px;
-      line-height: 1.45;
     }}
     .hero-meta {{
       min-width: 220px;
       text-align: right;
-      padding-top: 4px;
     }}
     .hero-date {{
       font-size: 24px;
       font-weight: 700;
       margin: 0 0 8px 0;
-      line-height: 1.1;
     }}
     .hero-edition {{
       font-size: 13px;
-      margin: 0 0 8px 0;
-      color: #EEF4F6;
-      line-height: 1.45;
+      margin: 0 0 10px 0;
+      color: #EFF4F6;
     }}
     .hero-rule {{
       height: 6px;
       background: {BRAND['champagne']};
-      margin: 8px 0 20px 0;
+      margin: 8px 0 18px 0;
       border-radius: 999px;
     }}
     .notice {{
@@ -698,64 +679,65 @@ def build_delivery_html(md_text: str, report_date_str: str, image_src: str | Non
       border-radius: 16px;
       padding: 14px 18px;
       font-size: 14px;
-      line-height: 1.45;
       margin: 0 0 18px 0;
     }}
     .summary-strip {{
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      display: flex;
       gap: 16px;
       margin: 0 0 18px 0;
     }}
     .mini-card {{
+      flex: 1 1 0;
       background: {BRAND['surface']};
       border: 1px solid {BRAND['border']};
       border-radius: 18px;
-      padding: 16px 18px;
-      min-height: 112px;
-    }}
-    .mini-card-highlight {{
-      background: #F4EDE1;
-      border-color: #E6D7BC;
+      padding: 14px 18px;
     }}
     .mini-label {{
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
-      letter-spacing: .06em;
+      letter-spacing: .04em;
       text-transform: uppercase;
       color: {BRAND['muted']};
-      margin: 0 0 10px 0;
+      margin: 0 0 8px 0;
     }}
     .mini-value {{
       font-family: Georgia, "Times New Roman", serif;
       font-weight: 700;
-      font-size: 24px;
+      font-size: 22px;
       color: {BRAND['ink']};
       line-height: 1.18;
     }}
-    .exec-grid, .decision-grid, .context-grid {{
+    .client-grid {{
       display: grid;
+      grid-template-columns: 1.7fr 1fr;
       gap: 18px;
-      margin: 0 0 18px 0;
       align-items: start;
+      margin: 0 0 18px 0;
     }}
-    .exec-grid {{ grid-template-columns: 1.45fr 1fr; }}
-    .decision-grid {{ grid-template-columns: 1fr 1fr; }}
-    .context-grid {{ grid-template-columns: 1fr 1fr; }}
     .panel {{
       background: {BRAND['surface']};
       border: 1px solid {BRAND['border']};
-      border-radius: 20px;
-      padding: 24px;
+      border-radius: 18px;
+      padding: 20px 22px;
       margin: 0 0 18px 0;
+    }}
+    .panel-compact,
+    .panel-exec,
+    .panel-snapshot,
+    .panel-risks {{
       page-break-inside: avoid;
       break-inside: avoid-page;
+    }}
+    .panel-exec {{
+      grid-row: span 2;
+      min-height: 100%;
     }}
     .panel-title {{
       margin: 0 0 14px 0;
       color: {BRAND['ink']};
-      font-size: 21px;
-      line-height: 1.24;
+      font-size: 20px;
+      line-height: 1.25;
       font-weight: 700;
     }}
     .section-kicker {{
@@ -765,34 +747,34 @@ def build_delivery_html(md_text: str, report_date_str: str, image_src: str | Non
       margin: 0 0 14px 0;
     }}
     .section-badge {{
-      width: 32px;
-      height: 32px;
-      line-height: 32px;
+      width: 34px;
+      height: 34px;
+      line-height: 34px;
       text-align: center;
       border-radius: 999px;
       background: #2A5384;
       color: #ffffff;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 15px;
       flex: 0 0 auto;
     }}
     .section-label {{
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
-      letter-spacing: .06em;
+      letter-spacing: .04em;
       text-transform: uppercase;
       color: {BRAND['muted']};
     }}
-    .chip-row {{ margin: 0 0 14px 0; }}
+    .chip-row {{
+      margin: 0 0 14px 0;
+    }}
     .chip {{
       display: inline-block;
-      padding: 7px 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(43,55,66,.10);
+      padding: 7px 14px;
+      border-radius: 999px;
       font-size: 12px;
       font-weight: 700;
       margin: 0 8px 8px 0;
-      line-height: 1.15;
     }}
     .summary-line {{
       margin: 0 0 12px 0;
@@ -801,45 +783,71 @@ def build_delivery_html(md_text: str, report_date_str: str, image_src: str | Non
     }}
     .summary-key {{
       color: {BRAND['muted']};
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .06em;
+      letter-spacing: .04em;
       margin: 0 0 6px 0;
     }}
     .summary-value {{
       color: {BRAND['ink']};
       font-size: 15px;
-      line-height: 1.58;
+      line-height: 1.52;
     }}
     .takeaway {{
       margin: 18px 0 0 0;
-      padding: 16px 18px;
+      padding: 14px 16px;
       border-radius: 14px;
       background: #F1EADF;
       border: 1px solid #E6D8C0;
     }}
     .takeaway-label {{
       color: {BRAND['muted']};
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .06em;
+      letter-spacing: .04em;
       margin: 0 0 6px 0;
     }}
     .takeaway-text {{
       color: {BRAND['ink']};
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 700;
-      line-height: 1.38;
+      line-height: 1.4;
     }}
-    .snapshot-group {{ margin: 0 0 16px 0; }}
-    .snapshot-group ul {{ margin: 10px 0 0 20px; padding: 0; }}
-    .snapshot-group li {{ margin: 0 0 6px 0; line-height: 1.45; font-size: 14px; }}
-    .panel p, .panel li {{ font-size: 14px; line-height: 1.58; margin-top: 0; }}
-    .panel ul, .panel ol {{ margin-top: 0; padding-left: 22px; }}
-    .panel h3 {{ color: {BRAND['ink']}; font-size: 15px; margin: 16px 0 8px 0; }}
-    .panel h4 {{ color: {BRAND['muted']}; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 8px 0; }}
+    .snapshot-group {{
+      margin: 0 0 14px 0;
+    }}
+    .snapshot-group ul {{
+      margin: 10px 0 0 22px;
+      padding: 0;
+    }}
+    .snapshot-group li {{
+      margin: 0 0 6px 0;
+      line-height: 1.45;
+      font-size: 14px;
+    }}
+    .panel p, .panel li {{
+      font-size: 14px;
+      line-height: 1.55;
+      margin-top: 0;
+    }}
+    .panel ul, .panel ol {{
+      margin-top: 0;
+      padding-left: 22px;
+    }}
+    .panel h3 {{
+      color: {BRAND['ink']};
+      font-size: 15px;
+      margin: 16px 0 8px 0;
+    }}
+    .panel h4 {{
+      color: {BRAND['muted']};
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin: 16px 0 8px 0;
+    }}
     .panel blockquote {{
       margin: 12px 0;
       padding: 10px 12px;
@@ -850,28 +858,38 @@ def build_delivery_html(md_text: str, report_date_str: str, image_src: str | Non
     .panel table {{
       width: 100%;
       border-collapse: collapse;
-      table-layout: auto;
+      table-layout: fixed;
       margin: 14px 0 12px 0;
       border: 1px solid {BRAND['border']};
       font-size: 12px;
     }}
+    .panel thead {{
+      display: table-header-group;
+    }}
+    .panel tbody {{
+      display: table-row-group;
+    }}
     .panel th {{
       text-align: left;
-      padding: 9px 10px;
+      padding: 8px 10px;
       border-bottom: 1px solid {BRAND['border']};
       background: #F2EBDD;
       color: {BRAND['ink']};
       vertical-align: middle;
-      line-height: 1.35;
     }}
     .panel td {{
-      padding: 9px 10px;
+      padding: 8px 10px;
       border-bottom: 1px solid #ECE6DE;
       vertical-align: top;
-      overflow-wrap: anywhere;
-      line-height: 1.42;
+      word-wrap: break-word;
     }}
-    .panel tr:nth-child(even) td {{ background: #FEFCF9; }}
+    .panel tr {{
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }}
+    .panel tr:nth-child(even) td {{
+      background: #FEFCF9;
+    }}
     .panel img {{
       max-width: 100%;
       height: auto;
@@ -880,55 +898,187 @@ def build_delivery_html(md_text: str, report_date_str: str, image_src: str | Non
       margin: 10px 0 4px 0;
       display: block;
     }}
-    .appendix-wrap {{ margin-top: 12px; }}
-    .appendix-head {{
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 27px;
-      font-weight: 700;
-      color: {BRAND['ink']};
-      margin: 0 0 8px 0;
-    }}
-    .appendix-intro {{
+    .analyst-divider {{
+      margin: 8px 0 18px 0;
+      padding: 10px 0 0 0;
+      border-top: 1px solid {BRAND['border']};
       color: {BRAND['muted']};
-      font-size: 14px;
-      line-height: 1.55;
-      margin: 0 0 18px 0;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
     }}
-    .appendix-stack {{ margin-top: 0; }}
-    a {{ color: #315F8B; text-decoration: underline; }}
-    @media screen and (max-width: 1100px) {{
-      .hero {{ display: block; }}
-      .hero-meta {{ text-align: left; margin-top: 18px; }}
-      .summary-strip, .exec-grid, .decision-grid, .context-grid {{ display: block; }}
-      .mini-card, .panel {{ margin-bottom: 16px; }}
+    a {{
+      color: #315F8B;
+      text-decoration: underline;
     }}
     """
 
-    executive_blocks = []
-    if executive_summary_panel or action_snapshot_panel:
-        executive_blocks.append(f"<div class='exec-grid'>{executive_summary_panel}{action_snapshot_panel}</div>")
-    if bottom_line_panel or risks_panel:
-        executive_blocks.append(f"<div class='decision-grid'>{bottom_line_panel}{risks_panel}</div>")
-    if regime_panel or radar_panel:
-        executive_blocks.append(f"<div class='context-grid'>{regime_panel}{radar_panel}</div>")
-    if equity_panel:
-        executive_blocks.append(equity_panel)
+    email_css = """
+    .report-stack {
+      margin-top: 0;
+    }
+    @media screen and (max-width: 1100px) {
+      .hero, .summary-strip, .client-grid {
+        display: block;
+      }
+      .hero-meta {
+        text-align: left;
+        margin-top: 16px;
+      }
+      .mini-card, .panel {
+        margin-bottom: 16px;
+      }
+      .panel-exec {
+        min-height: auto;
+      }
+    }
+    """
 
-    appendix_html = ""
-    if appendix_panels:
-        appendix_html = (
-            "<div class='appendix-wrap'>"
-            "<div class='appendix-head'>Analyst appendix</div>"
-            "<div class='appendix-intro'>The sections below preserve the full analytical record, but the executive reading experience above should stand on its own.</div>"
-            f"<div class='appendix-stack'>{''.join(appendix_panels)}</div>"
-            "</div>"
+    pdf_css = f"""
+    @page {{
+      size: A4 landscape;
+      margin: 12mm;
+    }}
+    body {{
+      background: #ffffff;
+    }}
+    .report-shell {{
+      max-width: none;
+      padding-bottom: 0;
+    }}
+    .hero,
+    .notice,
+    .summary-strip,
+    .panel-compact,
+    .panel-exec,
+    .panel-snapshot,
+    .panel-risks,
+    .mini-card {{
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }}
+    .hero {{
+      border-radius: 10px 10px 0 0;
+      padding: 20px 22px 16px 22px;
+    }}
+    .hero-meta {{
+      min-width: 180px;
+    }}
+    .summary-strip {{
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .client-grid {{
+      display: block;
+      margin-bottom: 8px;
+    }}
+    .panel {{
+      page-break-inside: auto;
+      break-inside: auto;
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }}
+    .panel-exec {{
+      min-height: auto;
+      grid-row: auto;
+    }}
+    .panel table {{
+      table-layout: auto;
+      font-size: 11px;
+    }}
+    .panel th, .panel td {{
+      padding: 6px 8px;
+    }}
+    .panel img {{
+      max-height: 170mm;
+      object-fit: contain;
+    }}
+    .analyst-divider {{
+      page-break-before: always;
+      break-before: page;
+      margin-top: 4px;
+    }}
+    """
+
+    pdf_fallback_css = """
+    @page {
+      size: A4 landscape;
+      margin: 12mm;
+    }
+    body {
+      background: #ffffff;
+      color: #222222;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .report-shell {
+      max-width: none;
+    }
+    .hero,
+    .summary-strip,
+    .client-grid {
+      display: block;
+    }
+    .hero {
+      padding: 16px 18px;
+      border-radius: 6px 6px 0 0;
+    }
+    .hero-meta {
+      text-align: left;
+      margin-top: 12px;
+      min-width: 0;
+    }
+    .hero-rule {
+      margin-bottom: 12px;
+    }
+    .summary-strip .mini-card {
+      margin-bottom: 10px;
+    }
+    .panel {
+      page-break-inside: auto;
+      break-inside: auto;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .panel-exec {
+      min-height: auto;
+      grid-row: auto;
+    }
+    .panel table {
+      table-layout: auto;
+      font-size: 10.5px;
+    }
+    .panel th, .panel td {
+      padding: 5px 7px;
+    }
+    .analyst-divider {
+      page-break-before: always;
+      break-before: page;
+      margin-top: 6px;
+    }
+    """
+
+    mode_css = email_css
+    if render_mode == "pdf":
+        mode_css = pdf_css
+    elif render_mode == "pdf_fallback":
+        mode_css = pdf_fallback_css
+
+    analyst_appendix = ""
+    if analyst_panels:
+        analyst_appendix = (
+            "<div class='analyst-divider'>Analyst appendix</div>"
+            + "".join(analyst_panels)
         )
 
     html = f"""
     <html>
       <head>
         <meta charset="utf-8" />
-        <style>{css}</style>
+        <style>{css_common}{mode_css}</style>
       </head>
       <body>
         <div class="report-shell">
@@ -940,13 +1090,14 @@ def build_delivery_html(md_text: str, report_date_str: str, image_src: str | Non
             <div class="hero-meta">
               <div class="hero-date">{esc(report_date_str)}</div>
               <div class="hero-edition">Weekly Allocation Review</div>
+              <div class="hero-edition">Client edition</div>
             </div>
           </div>
           <div class="hero-rule"></div>
           <div class="notice">{esc(DISCLAIMER_LINE)}</div>
           <div class="summary-strip">{intro_cards}</div>
-          {''.join(executive_blocks)}
-          {appendix_html}
+          <div class="client-grid">{''.join(client_grid)}</div>
+          <div class="report-stack">{''.join(client_panels)}{analyst_appendix}</div>
         </div>
       </body>
     </html>
@@ -954,8 +1105,13 @@ def build_delivery_html(md_text: str, report_date_str: str, image_src: str | Non
     return html.strip()
 
 
-def create_pdf_from_html(html: str, output_path: Path) -> None:
-    HTML(string=html, base_url=str(output_path.parent)).write_pdf(str(output_path))
+def create_pdf_from_html(html: str, output_path: Path, fallback_html: str | None = None) -> None:
+    try:
+        HTML(string=html, base_url=str(output_path.parent)).write_pdf(str(output_path))
+    except AssertionError:
+        if not fallback_html:
+            raise
+        HTML(string=fallback_html, base_url=str(output_path.parent)).write_pdf(str(output_path))
 
 
 # ---------- DELIVERY ASSETS ----------
@@ -976,16 +1132,17 @@ def generate_delivery_assets(output_dir: Path, report_path: Path):
     image_src_pdf = equity_curve_png.resolve().as_uri() if equity_curve_png.exists() else None
     image_src_email = "cid:equitycurve" if equity_curve_png.exists() else None
 
-    html_email = build_delivery_html(md_text_clean, report_date_str, image_src=image_src_email, mode="email")
-    html_pdf = build_delivery_html(md_text_clean, report_date_str, image_src=image_src_pdf, mode="pdf")
+    html_email = build_report_html(md_text_clean, report_date_str, image_src=image_src_email, render_mode="email")
+    html_pdf = build_report_html(md_text_clean, report_date_str, image_src=image_src_pdf, render_mode="pdf")
+    html_pdf_fallback = build_report_html(md_text_clean, report_date_str, image_src=image_src_pdf, render_mode="pdf_fallback")
 
     validate_email_body(html_email, md_text_clean)
 
     html_path = report_path.with_name(f"{safe_stem}_delivery.html")
-    html_path.write_text(html_pdf, encoding="utf-8")
+    html_path.write_text(html_email, encoding="utf-8")
 
     pdf_path = report_path.with_name(f"{safe_stem}.pdf")
-    create_pdf_from_html(html_pdf, pdf_path)
+    create_pdf_from_html(html_pdf, pdf_path, fallback_html=html_pdf_fallback)
 
     if not pdf_path.exists() or pdf_path.stat().st_size <= 0:
         raise RuntimeError(f"PDF attachment was not created correctly: {pdf_path}")
@@ -1028,20 +1185,37 @@ def send_email_with_attachments(assets: dict) -> tuple[list[str], Path, str]:
     alternative.attach(MIMEText(assets["html_email"], "html", "utf-8"))
     related.attach(alternative)
 
+    attachments = [assets["pdf_path"].name, assets["clean_md_path"].name, assets["html_path"].name]
+
     if assets["equity_curve_png"].exists():
         png_bytes = assets["equity_curve_png"].read_bytes()
+
         inline_png = MIMEImage(png_bytes, _subtype="png")
         inline_png.add_header("Content-ID", "<equitycurve>")
         inline_png.add_header("Content-Disposition", "inline", filename=assets["equity_curve_png"].name)
         related.attach(inline_png)
 
+        png_attachment = MIMEApplication(png_bytes, _subtype="png")
+        png_attachment.add_header("Content-Disposition", "attachment", filename=assets["equity_curve_png"].name)
+        root.attach(png_attachment)
+        attachments.append(assets["equity_curve_png"].name)
+
     root.attach(related)
 
-    attachments = [assets["pdf_path"].name]
     with open(assets["pdf_path"], "rb") as f:
         pdf_attachment = MIMEApplication(f.read(), _subtype="pdf")
         pdf_attachment.add_header("Content-Disposition", "attachment", filename=assets["pdf_path"].name)
         root.attach(pdf_attachment)
+
+    with open(assets["clean_md_path"], "rb") as f:
+        md_attachment = MIMEApplication(f.read(), _subtype="markdown")
+        md_attachment.add_header("Content-Disposition", "attachment", filename=assets["clean_md_path"].name)
+        root.attach(md_attachment)
+
+    with open(assets["html_path"], "rb") as f:
+        html_attachment = MIMEApplication(f.read(), _subtype="html")
+        html_attachment.add_header("Content-Disposition", "attachment", filename=assets["html_path"].name)
+        root.attach(html_attachment)
 
     with smtplib.SMTP(smtp_host, smtp_port) as server:
         server.starttls()
