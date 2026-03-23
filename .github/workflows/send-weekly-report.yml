@@ -40,16 +40,6 @@ jobs:
           pip install matplotlib mistune weasyprint
 
 
-      - name: Validate HTML and PDF render
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import send_report
-          latest = send_report.latest_report_file(Path("output"))
-          send_report.generate_delivery_assets(Path("output"), latest)
-          print(f"RENDER_OK | report={latest.name}")
-          PY
-
       - name: Validate HTML/PDF render before send
         run: |
           python - <<'PY'
