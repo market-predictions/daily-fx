@@ -360,8 +360,16 @@ def validate_required_report(md_text: str) -> None:
 
 
 def validate_email_body(html_body: str, md_text: str | None = None) -> None:
+    html_lower = html_body.lower()
+
+    masthead_options = [
+        "weekly etf review",
+        "weekly report review",
+    ]
+    if not any(token in html_lower for token in masthead_options):
+        raise RuntimeError("HTML body is missing required masthead block: WEEKLY ETF REVIEW")
+
     required_strings = [
-        "Weekly Report Review",
         "Executive summary",
         "Portfolio action snapshot",
         "Structural Opportunity Radar",
@@ -370,7 +378,7 @@ def validate_email_body(html_body: str, md_text: str | None = None) -> None:
         "Carry-forward input for next run",
     ]
     for token in required_strings:
-        if token not in html_body:
+        if token.lower() not in html_lower:
             raise RuntimeError(f"HTML body is missing required content block: {token}")
 
     if md_text:
