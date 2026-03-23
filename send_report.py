@@ -227,6 +227,10 @@ def parse_report_date(md_text: str, fallback: str | None = None) -> str:
         return match.group(1)
     return fallback or datetime.now().strftime("%Y-%m-%d")
 
+def format_full_date(date_str: str) -> str:
+    dt = datetime.strptime(date_str, "%Y-%m-%d")
+    return f"{dt.strftime('%A')}, {dt.day} {dt.strftime('%B %Y')}"
+
 
 def extract_section(md_text: str, title_contains: str):
     lines = md_text.splitlines()
@@ -575,6 +579,15 @@ def section_header_html(number: int, title: str) -> str:
     )
 
 
+def section_number(section: dict) -> int:
+    return int(section.get("display_number", section["number"]))
+
+
+def with_display_number(section: dict, display_number: int) -> dict:
+    clone = dict(section)
+    clone["display_number"] = display_number
+    return clone
+
 
 
 def parse_subsections(lines):
@@ -626,7 +639,7 @@ def render_executive_summary(section: dict) -> str:
     pairs = extract_label_pairs(section["lines"])
     if not pairs:
         body = render_markdown_block("\n".join(section["lines"]))
-        return f"<div class='panel panel-exec'>{section_header_html(section['number'], section['title'])}{body}</div>"
+        return f"<div class='panel panel-exec'>{section_header_html(section_number(section), section['title'])}{body}</div>"
 
     body_parts = []
     for key, value in pairs:
@@ -644,7 +657,7 @@ def render_executive_summary(section: dict) -> str:
 
     return (
         f"<div class='panel panel-exec'>"
-        f"{section_header_html(section['number'], section['title'])}"
+        f"{section_header_html(section_number(section), section['title'])}"
         f"{''.join(body_parts)}"
         f"{takeaway_html}"
         f"</div>"
@@ -672,7 +685,7 @@ def render_action_snapshot(section: dict) -> str:
 
     return (
         f"<div class='panel panel-snapshot'>"
-        f"{section_header_html(section['number'], section['title'])}"
+        f"{section_header_html(section_number(section), section['title'])}"
         f"<table class='snapshot-table'>"
         f"<thead><tr><th>Recommendation</th><th>Tickers / notes</th></tr></thead>"
         f"<tbody>{''.join(rows)}</tbody></table>"
@@ -685,7 +698,7 @@ def render_risks(section: dict) -> str:
     body = render_markdown_block("\n".join(section["lines"]))
     return (
         f"<div class='panel panel-risks'>"
-        f"{section_header_html(section['number'], section['title'])}"
+        f"{section_header_html(section_number(section), section['title'])}"
         f"{body}"
         f"</div>"
     )
@@ -694,7 +707,7 @@ def render_standard_panel(section: dict, image_src: str | None = None, extra_cla
     body = render_markdown_block("\n".join(section["lines"]), image_src=image_src)
     return (
         f"<div class='panel {extra_class}'>"
-        f"{section_header_html(section['number'], section['title'])}"
+        f"{section_header_html(section_number(section), section['title'])}"
         f"{body}"
         f"</div>"
     )
@@ -744,8 +757,24 @@ def render_position_review(section: dict) -> str:
 
     return (
         f"<div class='panel panel-positions'>"
-        f"{section_header_html(section['number'], section['title'])}"
+        f"{section_header_html(section_number(section), section['title'])}"
         f"{''.join(cards)}"
+        f"</div>"
+    )
+
+
+def render_carry_panel(section: dict) -> str:
+    visible_lines = []
+    hidden_sentence = clean_md_inline(SECTION16_SENTENCE)
+    for raw in section["lines"]:
+        if clean_md_inline(raw.strip()) == hidden_sentence:
+            continue
+        visible_lines.append(raw)
+    body = render_markdown_block("\n".join(visible_lines))
+    return (
+        f"<div class='panel panel-carry'>"
+        f"{section_header_html(section_number(section), section['title'])}"
+        f"{body}"
         f"</div>"
     )
 
@@ -754,7 +783,7 @@ def render_best_opportunities(section: dict) -> str:
     body = render_markdown_block("\n".join(section["lines"]))
     return (
         f"<div class='panel panel-opportunities'>"
-        f"{section_header_html(section['number'], section['title'])}"
+        f"{section_header_html(section_number(section), section['title'])}"
         f"{body}"
         f"</div>"
     )
@@ -774,7 +803,7 @@ def render_rotation_plan(section: dict) -> str:
         cells.append(f"<td>{content}</td>")
     return (
         f"<div class='panel panel-rotation'>"
-        f"{section_header_html(section['number'], section['title'])}"
+        f"{section_header_html(section_number(section), section['title'])}"
         f"<table class='rotation-table'><thead><tr>{heads}</tr></thead><tbody><tr>{''.join(cells)}</tr></tbody></table>"
         f"</div>"
     )
@@ -788,6 +817,7 @@ def build_report_html(
 ) -> str:
     report_title, sections = extract_sections(md_text)
     sections_by_number = {s["number"]: s for s in sections}
+    display_date_str = format_full_date(report_date_str)
 
     exec_pairs = OrderedDict(extract_label_pairs(sections_by_number.get(1, {}).get("lines", [])))
     primary_regime = exec_pairs.get("Primary regime", "Pending classification")
@@ -802,30 +832,31 @@ def build_report_html(
 
     client_grid = []
     if 1 in sections_by_number:
-        client_grid.append(render_executive_summary(sections_by_number[1]))
+        client_grid.append(render_executive_summary(with_display_number(sections_by_number[1], 1)))
     if 2 in sections_by_number:
-        client_grid.append(render_action_snapshot(sections_by_number[2]))
-    if 5 in sections_by_number:
-        client_grid.append(render_risks(sections_by_number[5]))
+        client_grid.append(render_action_snapshot(with_display_number(sections_by_number[2], 2)))
 
     client_panels = []
     panel_map = {
-        6: "panel-bottomline panel-compact",
         3: "panel-regime",
         4: "panel-radar",
+        5: "panel-risks panel-compact",
+        6: "panel-bottomline panel-compact",
         7: "panel-equity",
     }
-    for number in [6, 3, 4, 7]:
+    for display_number, number in enumerate([3, 4, 5, 6, 7], start=3):
         if number in sections_by_number:
             img_src = image_src if number == 7 else None
             extra = panel_map.get(number, "")
-            client_panels.append(render_standard_panel(sections_by_number[number], image_src=img_src, extra_class=extra))
+            client_panels.append(render_standard_panel(with_display_number(sections_by_number[number], display_number), image_src=img_src, extra_class=extra))
 
     analyst_panels = []
+    analyst_display_number = 1
     for number in range(8, 18):
         if number not in sections_by_number:
             continue
-        section = sections_by_number[number]
+        section = with_display_number(sections_by_number[number], analyst_display_number)
+        analyst_display_number += 1
         if number == 10:
             analyst_panels.append(render_position_review(section))
         elif number == 11:
@@ -833,7 +864,7 @@ def build_report_html(
         elif number == 12:
             analyst_panels.append(render_rotation_plan(section))
         elif number == 16:
-            analyst_panels.append(render_standard_panel(section, extra_class="panel-carry"))
+            analyst_panels.append(render_carry_panel(section))
         else:
             analyst_panels.append(render_standard_panel(section))
 
@@ -860,6 +891,24 @@ def build_report_html(
       padding: 20px 24px 18px 24px;
       border-radius: 14px 14px 0 0;
     }}
+    .hero-secondary {{
+      margin-top: 26px;
+    }}
+    .hero-table {{
+      width: 100%;
+      border-collapse: collapse;
+    }}
+    .hero-table td {{
+      vertical-align: middle;
+    }}
+    .hero-left {{
+      text-align: left;
+    }}
+    .hero-right {{
+      text-align: right;
+      white-space: nowrap;
+      padding-left: 24px;
+    }}
     .masthead {{
       font-family: Georgia, "Times New Roman", serif;
       font-weight: 700;
@@ -872,6 +921,13 @@ def build_report_html(
       font-size: 14px;
       color: #EFF4F6;
       margin: 0;
+    }}
+    .hero-side-label {{
+      font-size: 16px;
+      line-height: 1.2;
+      font-weight: 700;
+      color: {BRAND['header_text']};
+      letter-spacing: .03em;
     }}
     .hero-rule {{
       height: 5px;
@@ -945,8 +1001,8 @@ def build_report_html(
       vertical-align: middle;
     }}
     .section-badge-cell {{
-      width: 56px;
-      padding: 0 14px 0 0;
+      width: 64px;
+      padding: 0 16px 0 0;
       vertical-align: middle;
     }}
     .section-label-cell {{
@@ -954,26 +1010,27 @@ def build_report_html(
       vertical-align: middle;
     }}
     .section-badge {{
-      width: 42px;
-      height: 42px;
+      width: 46px;
+      height: 46px;
       border-radius: 999px;
       background: #2A5384;
       color: #ffffff;
       font-weight: 700;
-      font-size: 18px;
+      font-size: 17px;
       display: block;
       text-align: center;
-      line-height: 42px;
+      line-height: 46px;
       mso-line-height-rule: exactly;
+      font-family: Arial, Helvetica, sans-serif;
     }}
     .section-label {{
       display: block;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: .08em;
       text-transform: uppercase;
       color: {BRAND['muted']};
-      line-height: 1.1;
+      line-height: 1.12;
       mso-line-height-rule: exactly;
     }}
     .summary-line {{
@@ -1179,11 +1236,12 @@ def build_report_html(
     }}
     .panel-opportunities h5 {{
       margin: 8px 0 18px 0;
-      font-size: 12px;
-      letter-spacing: .10em;
+      font-size: 11px;
+      letter-spacing: .12em;
       text-transform: uppercase;
       color: {BRAND['muted']};
       font-weight: 700;
+      text-align: right;
     }}
     .panel-opportunities h5 + h3 {{
       margin-top: 0;
@@ -1205,14 +1263,7 @@ def build_report_html(
       font-style: italic;
     }}
     .analyst-divider {{
-      margin: 10px 0 18px 0;
-      padding: 10px 0 0 0;
-      border-top: 1px solid {BRAND['border']};
-      color: {BRAND['muted']};
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .08em;
+      display: none;
     }}
     a {{
       color: #315F8B;
@@ -1227,6 +1278,15 @@ def build_report_html(
     @media screen and (max-width: 1100px) {
       .summary-strip, .client-grid, .subgrid {
         display: block;
+      }
+      .hero-table, .hero-table tbody, .hero-table tr, .hero-table td {
+        display: block;
+        width: 100%;
+      }
+      .hero-right {
+        text-align: left;
+        padding-left: 0;
+        padding-top: 10px;
       }
       .mini-card, .panel {
         margin-bottom: 16px;
@@ -1292,6 +1352,7 @@ def build_report_html(
       object-fit: contain;
     }}
     .analyst-divider {{
+      display: none;
       page-break-before: always;
       break-before: page;
       margin-top: 4px;
@@ -1329,7 +1390,15 @@ def build_report_html(
 
     analyst_appendix = ""
     if analyst_panels:
-        analyst_appendix = "<div class='analyst-divider'>Analyst appendix</div>" + "".join(analyst_panels)
+        analyst_appendix = (
+            f"<div class='hero hero-secondary'>"
+            f"<table class='hero-table' role='presentation' cellpadding='0' cellspacing='0'><tr>"
+            f"<td class='hero-left'><div class='masthead'>WEEKLY ETF REVIEW</div><p class='hero-sub'>{esc(display_date_str)}</p></td>"
+            f"<td class='hero-right'><div class='hero-side-label'>Analyst Report</div></td>"
+            f"</tr></table>"
+            f"</div><div class='hero-rule'></div>"
+            + "".join(analyst_panels)
+        )
 
     html = f"""
     <html>
@@ -1340,8 +1409,10 @@ def build_report_html(
       <body>
         <div class="report-shell">
           <div class="hero">
-            <div class="masthead">WEEKLY ETF REVIEW</div>
-            <p class="hero-sub">{esc(report_title or f"Weekly Report Review {report_date_str}")}</p>
+            <table class="hero-table" role="presentation" cellpadding="0" cellspacing="0"><tr>
+              <td class="hero-left"><div class="masthead">WEEKLY ETF REVIEW</div><p class="hero-sub">{esc(display_date_str)}</p></td>
+              <td class="hero-right"><div class="hero-side-label">Investor Report</div></td>
+            </tr></table>
           </div>
           <div class="hero-rule"></div>
           <div class="notice">{esc(DISCLAIMER_LINE)}</div>
