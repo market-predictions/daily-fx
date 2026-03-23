@@ -1,690 +1,629 @@
-#!/usr/bin/env python3
-"""
-send_fxreport.py
-
-Validate the newest Weekly FX Review markdown, render delivery HTML/PDF,
-and send it to the configured recipient.
-
-Design goals:
-- premium, email-first layout
-- strict section validation
-- USD-base portfolio labels
-- optional equity-curve image
-- minimal external dependencies
-"""
-
-from __future__ import annotations
-
-import html
-import os
-import re
-import smtplib
-from dataclasses import dataclass
-from datetime import datetime
-from email.mime.application import MIMEApplication
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from pathlib import Path
-from typing import Iterable
-
-REQUIRED_MAIL_TO = "mrkt.rprts@gmail.com"
-TITLE = "Weekly FX Review"
-DISCLAIMER_LINE = "This report is for informational and educational purposes only; please see the disclaimer at the end."
-SECTION16_SENTENCE = "**This section is the canonical default input for the next run unless the user explicitly overrides it.**"
-
-REQUIRED_SECTION_HEADINGS = [
-    "## 1. Executive summary",
-    "## 2. Portfolio action snapshot",
-    "## 3. Global macro & FX regime dashboard",
-    "## 4. Structural currency opportunity radar",
-    "## 5. Key risks / invalidators",
-    "## 6. Bottom line",
-    "## 7. Equity curve and portfolio development",
-    "## 8. Currency allocation map",
-    "## 9. Macro transmission & second-order effects map",
-    "## 10. Current currency review",
-    "## 11. Best new currency opportunities",
-    "## 12. Portfolio rotation plan",
-    "## 13. Final action table",
-    "## 14. Position changes executed this run",
-    "## 15. Current portfolio holdings and cash",
-    "## 16. Carry-forward input for next run",
-    "## 17. Disclaimer",
-]
-
-REQUIRED_SECTION15_LABELS = [
-    "- Starting capital (USD):",
-    "- Invested market value (USD):",
-    "- Cash (USD):",
-    "- Total portfolio value (USD):",
-    "- Since inception return (%):",
-    "- Base currency:",
-]
-
-CITATION_PATTERNS = [
-    r"cite.*?",
-    r"filecite.*?",
-    r"forecast.*?",
-    r"finance.*?",
-    r"schedule.*?",
-    r"standing.*?",
-]
-
-SECTION_RE = re.compile(r"^##\s+(\d+)\.\s+(.+)$", re.MULTILINE)
-REPORT_FILE_RE = re.compile(r"weekly_fx_review_(\d{6})(?:_(\d{2}))?\.md$", re.IGNORECASE)
-DATE_PATTERNS = [
-    "%B %d, %Y",
-    "%d %B %Y",
-    "%Y-%m-%d",
-]
-
-STYLE = """
-:root{
-  --paper:#f7f3eb;
-  --ink:#18252c;
-  --muted:#53636d;
-  --band:#203740;
-  --line:#d7c7a4;
-  --card:#fffdfa;
-  --soft:#efe7d8;
-  --accent:#9f8357;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;
-  padding:0;
-  background:var(--paper);
-  color:var(--ink);
-  font-family:Arial,Helvetica,sans-serif;
-  line-height:1.45;
-}
-.shell{
-  max-width:1080px;
-  margin:0 auto;
-  padding:28px 20px 40px;
-}
-.hero{
-  background:var(--band);
-  color:#fff;
-  padding:28px 30px 24px;
-  border-radius:16px;
-  box-shadow:0 10px 28px rgba(20,34,40,.12);
-}
-.masthead{
-  font-family:Georgia,"Times New Roman",serif;
-  letter-spacing:.06em;
-  font-size:32px;
-  margin:0 0 10px;
-  text-transform:uppercase;
-}
-.hero-row{
-  display:flex;
-  justify-content:space-between;
-  gap:18px;
-  align-items:flex-end;
-  flex-wrap:wrap;
-}
-.hero .date{
-  font-size:15px;
-  opacity:.95;
-}
-.hero .label{
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.12em;
-  opacity:.82;
-}
-.disclaimer{
-  margin:18px 0 22px;
-  color:var(--muted);
-  font-style:italic;
-  border-left:3px solid var(--line);
-  padding-left:12px;
-}
-.grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:16px;
-}
-.panel{
-  background:var(--card);
-  border:1px solid #eadfcb;
-  border-radius:16px;
-  padding:18px 18px 16px;
-  box-shadow:0 6px 20px rgba(41,45,50,.05);
-  margin-bottom:16px;
-}
-.panel.section-appendix{border-color:#d9d7cf;background:#fffefb}
-.section-title{
-  margin:0 0 12px;
-  font-size:20px;
-  line-height:1.2;
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-.badge{
-  width:32px;
-  height:32px;
-  border-radius:50%;
-  background:#254f5d;
-  color:#fff;
-  display:inline-flex;
-  justify-content:center;
-  align-items:center;
-  font-size:14px;
-  font-weight:700;
-  flex:0 0 32px;
-}
-.section-body p{margin:0 0 10px}
-.section-body ul, .section-body ol{margin:0 0 12px 20px;padding:0}
-.section-body li{margin:0 0 6px}
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin:8px 0 12px;
-  font-size:14px;
-}
-th,td{
-  text-align:left;
-  padding:9px 10px;
-  border-bottom:1px solid #eadfcb;
-  vertical-align:top;
-}
-th{
-  font-size:12px;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-  color:var(--muted);
-}
-code{background:#f0ece2;padding:2px 5px;border-radius:5px}
-hr{border:none;border-top:1px solid #eadfcb;margin:18px 0}
-.kicker{
-  margin:26px 0 10px;
-  font-size:12px;
-  letter-spacing:.16em;
-  text-transform:uppercase;
-  color:var(--accent);
-}
-.footer-note{
-  color:var(--muted);
-  font-size:12px;
-  margin-top:16px;
-}
-img.eq{
-  width:100%;
-  max-width:760px;
-  height:auto;
-  border:1px solid #eadfcb;
-  border-radius:10px;
-  background:#fff;
-}
-@media (max-width: 760px){
-  .grid{grid-template-columns:1fr}
-  .hero{padding:24px 22px 20px}
-  .masthead{font-size:28px}
-}
-"""
-
-@dataclass
-class Section:
-    number: int
-    title: str
-    body: str
-
-def esc(text: str) -> str:
-    return html.escape(text, quote=True)
-
-def require_env(name: str) -> str:
-    value = os.environ.get(name, "").strip()
-    if not value:
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    return value
-
-def normalize_whitespace(text: str) -> str:
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    return re.sub(r"[ \t]+\n", "\n", text)
-
-def strip_citations(text: str) -> str:
-    cleaned = text
-    for pattern in CITATION_PATTERNS:
-        cleaned = re.sub(pattern, "", cleaned, flags=re.DOTALL)
-    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    return cleaned.strip() + "\n"
-
-def normalize_heading(s: str) -> str:
-    s = s.strip().lower()
-    s = s.replace("&", "and")
-    s = re.sub(r"[^a-z0-9]+", " ", s)
-    return re.sub(r"\s+", " ", s).strip()
-
-def latest_report_file(output_dir: Path) -> Path:
-    files = []
-    for path in output_dir.glob("weekly_fx_review_*.md"):
-        m = REPORT_FILE_RE.fullmatch(path.name)
-        if not m:
-            continue
-        date_part = m.group(1)
-        version = int(m.group(2) or "0")
-        files.append((date_part, version, path))
-    if not files:
-        raise FileNotFoundError("No files found matching output/weekly_fx_review_*.md")
-    files.sort(key=lambda row: (row[0], row[1]))
-    return files[-1][2]
-
-def validate_required_report(text: str) -> None:
-    if TITLE.lower() not in text.lower():
-        raise RuntimeError(f"Report title must contain '{TITLE}'.")
-    normalized = [normalize_heading(h) for h in REQUIRED_SECTION_HEADINGS]
-    found = [normalize_heading("## " + m.group(1) + ". " + m.group(2)) for m in SECTION_RE.finditer(text)]
-    missing = [h for h in normalized if h not in found]
-    if missing:
-        raise RuntimeError(f"Missing required section headings: {missing}")
-    section15 = section_body(text, 15)
-    for label in REQUIRED_SECTION15_LABELS:
-        if label not in section15:
-            raise RuntimeError(f"Section 15 is missing required label: {label}")
-    section16 = section_body(text, 16)
-    if SECTION16_SENTENCE not in section16:
-        raise RuntimeError("Section 16 is missing the canonical carry-forward sentence.")
-
-def section_body(text: str, number: int) -> str:
-    pattern = re.compile(rf"^##\s+{number}\.\s+.+?$", re.MULTILINE)
-    m = pattern.search(text)
-    if not m:
-        return ""
-    start = m.end()
-    m_next = re.compile(r"^##\s+\d+\.\s+.+?$", re.MULTILINE).search(text, start)
-    end = m_next.start() if m_next else len(text)
-    return text[start:end].strip()
-
-def parse_report_date(md_text: str, report_path: Path) -> str:
-    lines = [line.strip() for line in md_text.splitlines() if line.strip()]
-    for i, line in enumerate(lines[:8]):
-        if line.lower() == TITLE.lower():
-            for nxt in lines[i + 1:i + 5]:
-                if nxt.startswith(">"):
-                    continue
-                parsed = try_parse_date(nxt)
-                if parsed:
-                    return parsed.strftime("%B %d, %Y")
-    m = REPORT_FILE_RE.fullmatch(report_path.name)
-    if m:
-        dt = datetime.strptime(m.group(1), "%y%m%d")
-        return dt.strftime("%B %d, %Y")
-    return datetime.utcnow().strftime("%B %d, %Y")
-
-def try_parse_date(value: str) -> datetime | None:
-    value = value.strip().strip("*").strip()
-    for fmt in DATE_PATTERNS:
-        try:
-            return datetime.strptime(value, fmt)
-        except ValueError:
-            continue
-    return None
-
-def parse_sections(text: str) -> list[Section]:
-    matches = list(SECTION_RE.finditer(text))
-    sections: list[Section] = []
-    for idx, match in enumerate(matches):
-        start = match.end()
-        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
-        body = text[start:end].strip()
-        sections.append(Section(number=int(match.group(1)), title=match.group(2).strip(), body=body))
-    return sections
-
-def markdown_to_html(md: str) -> str:
-    try:
-        import markdown  # type: ignore
-        return markdown.markdown(
-            md,
-            extensions=["tables", "sane_lists", "nl2br"],
-            output_format="html5",
-        )
-    except Exception:
-        return simple_markdown_to_html(md)
-
-def simple_markdown_to_html(md: str) -> str:
-    lines = md.splitlines()
-    parts: list[str] = []
-    in_ul = False
-    in_ol = False
-    in_table = False
-    table_buf: list[str] = []
-
-    def close_lists():
-        nonlocal in_ul, in_ol
-        if in_ul:
-            parts.append("</ul>")
-            in_ul = False
-        if in_ol:
-            parts.append("</ol>")
-            in_ol = False
-
-    def flush_table():
-        nonlocal in_table, table_buf
-        if not table_buf:
-            return
-        rows = [row.strip() for row in table_buf if row.strip()]
-        if len(rows) >= 2 and set(rows[1].replace("|", "").replace(":", "").replace("-", "").strip()) == set():
-            headers = [cell.strip() for cell in rows[0].strip("|").split("|")]
-            parts.append("<table><thead><tr>" + "".join(f"<th>{esc(h)}</th>" for h in headers) + "</tr></thead><tbody>")
-            for row in rows[2:]:
-                cells = [cell.strip() for cell in row.strip("|").split("|")]
-                parts.append("<tr>" + "".join(f"<td>{esc(c)}</td>" for c in cells) + "</tr>")
-            parts.append("</tbody></table>")
-        else:
-            parts.append("<pre>" + esc("\n".join(table_buf)) + "</pre>")
-        table_buf = []
-        in_table = False
-
-    for raw in lines:
-        line = raw.rstrip()
-        if "|" in line and line.count("|") >= 2:
-            close_lists()
-            in_table = True
-            table_buf.append(line)
-            continue
-        elif in_table:
-            flush_table()
-
-        stripped = line.strip()
-        if not stripped:
-            close_lists()
-            parts.append("")
-            continue
-        if stripped.startswith("### "):
-            close_lists()
-            parts.append(f"<h3>{esc(stripped[4:])}</h3>")
-        elif stripped.startswith("#### "):
-            close_lists()
-            parts.append(f"<h4>{esc(stripped[5:])}</h4>")
-        elif stripped.startswith("- "):
-            if in_ol:
-                parts.append("</ol>")
-                in_ol = False
-            if not in_ul:
-                parts.append("<ul>")
-                in_ul = True
-            parts.append(f"<li>{inline_format(stripped[2:])}</li>")
-        elif re.match(r"^\d+\.\s+", stripped):
-            if in_ul:
-                parts.append("</ul>")
-                in_ul = False
-            if not in_ol:
-                parts.append("<ol>")
-                in_ol = True
-            item = re.sub(r"^\d+\.\s+", "", stripped)
-            parts.append(f"<li>{inline_format(item)}</li>")
-        elif stripped.startswith("> "):
-            close_lists()
-            parts.append(f"<blockquote>{inline_format(stripped[2:])}</blockquote>")
-        else:
-            close_lists()
-            parts.append(f"<p>{inline_format(stripped)}</p>")
-
-    if in_table:
-        flush_table()
-    close_lists()
-    return "\n".join(part for part in parts if part != "")
-
-def inline_format(text: str) -> str:
-    text = esc(text)
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"\*(.+?)\*", r"<em>\1</em>", text)
-    text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
-    return text
-
-def build_report_html(md_text: str, report_date_str: str, image_src: str | None = None) -> str:
-    sections = parse_sections(md_text)
-    client_sections = [s for s in sections if s.number <= 7]
-    analyst_sections = [s for s in sections if s.number >= 8]
-
-    def panel(section: Section, appendix: bool = False) -> str:
-        extra = " section-appendix" if appendix else ""
-        body = section.body
-        if section.number == 16:
-            body = body.replace(SECTION16_SENTENCE, "")
-            body = body.strip()
-        body_html = markdown_to_html(body) if body else ""
-        if section.number == 7 and image_src:
-            body_html += f'<p><img class="eq" src="{esc(image_src)}" alt="Equity curve"></p>'
-        return (
-            f'<section class="panel{extra}">'
-            f'<h2 class="section-title"><span class="badge">{section.number}</span><span>{esc(section.title)}</span></h2>'
-            f'<div class="section-body">{body_html}</div>'
-            f'</section>'
-        )
-
-    intro_cards = "".join(panel(s) for s in client_sections[:2])
-    client_grid = "".join(panel(s) for s in client_sections[2:4])
-    client_panels = "".join(panel(s) for s in client_sections[4:])
-    analyst_panels = "".join(panel(s, appendix=True) for s in analyst_sections)
-
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{esc(TITLE)}</title>
-<style>{STYLE}</style>
-</head>
-<body>
-  <div class="shell">
-    <header class="hero">
-      <div class="hero-row">
-        <div>
-          <div class="masthead">{esc(TITLE)}</div>
-          <div class="date">{esc(report_date_str)}</div>
-        </div>
-        <div class="label">Investor Report</div>
-      </div>
-    </header>
-
-    <div class="disclaimer">{esc(DISCLAIMER_LINE)}</div>
-
-    {intro_cards}
-
-    <div class="grid">
-      {client_grid}
-    </div>
-
-    {client_panels}
-
-    <div class="kicker">Analyst Appendix</div>
-    {analyst_panels}
-
-    <div class="footer-note">Generated by send_fxreport.py</div>
-  </div>
-</body>
-</html>""".strip()
-
-def plain_text_from_markdown(md_text: str) -> str:
-    text = re.sub(r"^#.+$", "", md_text, flags=re.MULTILINE)
-    text = re.sub(r"^>\s*", "", text, flags=re.MULTILINE)
-    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
-    text = re.sub(r"\*(.*?)\*", r"\1", text)
-    text = re.sub(r"`(.*?)`", r"\1", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip() + "\n"
-
-def create_pdf_from_html(html_text: str, output_path: Path) -> None:
-    try:
-        from weasyprint import HTML  # type: ignore
-        HTML(string=html_text, base_url=str(output_path.parent)).write_pdf(str(output_path))
-    except Exception as exc:
-        raise RuntimeError(
-            "PDF generation failed. Install WeasyPrint in the workflow dependencies."
-        ) from exc
-
-def parse_section15_value(md_text: str, label: str) -> float | None:
-    section15 = section_body(md_text, 15)
-    pattern = re.compile(rf"^{re.escape(label)}\s*(.+?)\s*$", re.MULTILINE)
-    m = pattern.search(section15)
-    if not m:
-        return None
-    raw = m.group(1).replace(",", "").replace("$", "").strip()
-    raw = re.sub(r"[^\d.\-]", "", raw)
-    try:
-        return float(raw)
-    except ValueError:
-        return None
-
-def create_equity_curve_png(output_dir: Path, output_png: Path) -> bool:
-    try:
-        import matplotlib.pyplot as plt  # type: ignore
-    except Exception:
-        return False
-
-    history: list[tuple[str, float]] = []
-    for path in sorted(output_dir.glob("weekly_fx_review_*.md")):
-        try:
-            text = normalize_whitespace(path.read_text(encoding="utf-8"))
-            value = parse_section15_value(text, "- Total portfolio value (USD):")
-            if value is None:
-                continue
-            m = REPORT_FILE_RE.fullmatch(path.name)
-            label = m.group(1) if m else path.stem
-            history.append((label, value))
-        except Exception:
-            continue
-
-    if len(history) < 2:
-        return False
-
-    x = list(range(len(history)))
-    y = [v for _, v in history]
-    labels = [label for label, _ in history]
-
-    plt.figure(figsize=(8.4, 3.4))
-    plt.plot(x, y, linewidth=2)
-    plt.xticks(x, labels, rotation=45, ha="right", fontsize=8)
-    plt.ylabel("Portfolio value (USD)")
-    plt.title("Model portfolio development")
-    plt.tight_layout()
-    output_png.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_png, dpi=150)
-    plt.close()
-    return True
-
-def generate_delivery_assets(output_dir: Path, report_path: Path) -> dict:
-    original_md_text = normalize_whitespace(report_path.read_text(encoding="utf-8"))
-    md_text_clean = strip_citations(original_md_text)
-    validate_required_report(md_text_clean)
-    report_date_str = parse_report_date(md_text_clean, report_path)
-    safe_stem = report_path.stem
-
-    clean_md_path = report_path.with_name(f"{safe_stem}_clean.md")
-    clean_md_path.write_text(md_text_clean, encoding="utf-8")
-
-    equity_curve_png = report_path.with_name(f"{safe_stem}_equity_curve.png")
-    has_curve = create_equity_curve_png(output_dir, equity_curve_png)
-    image_src_pdf = equity_curve_png.resolve().as_uri() if has_curve else None
-    image_src_email = "cid:equitycurve" if has_curve else None
-
-    html_email = build_report_html(md_text_clean, report_date_str, image_src=image_src_email)
-    html_pdf = build_report_html(md_text_clean, report_date_str, image_src=image_src_pdf)
-
-    html_path = report_path.with_name(f"{safe_stem}_delivery.html")
-    html_path.write_text(html_email, encoding="utf-8")
-
-    pdf_path = report_path.with_name(f"{safe_stem}.pdf")
-    create_pdf_from_html(html_pdf, pdf_path)
-    if not pdf_path.exists() or pdf_path.stat().st_size <= 0:
-        raise RuntimeError(f"PDF attachment was not created correctly: {pdf_path}")
-
-    return {
-        "report_date_str": report_date_str,
-        "clean_md_path": clean_md_path,
-        "equity_curve_png": equity_curve_png,
-        "html_path": html_path,
-        "pdf_path": pdf_path,
-        "html_email": html_email,
-        "safe_stem": safe_stem,
-        "md_text_clean": md_text_clean,
-        "has_curve": has_curve,
-    }
-
-def write_delivery_manifest(path: Path, report_name: str, recipient: str, attachments: Iterable[str]) -> None:
-    timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    content = (
-        f"Delivery status: OK\n"
-        f"Timestamp: {timestamp}\n"
-        f"Report: {report_name}\n"
-        f"Recipient: {recipient}\n"
-        f"HTML body: full report\n"
-        f"PDF attached: yes\n"
-        f"Attachments: {', '.join(attachments)}\n"
-    )
-    path.write_text(content, encoding="utf-8")
-
-def send_email_with_attachments(assets: dict) -> tuple[list[str], Path, str]:
-    subject = f"{TITLE} {assets['report_date_str']}"
-    smtp_host = require_env("MRKT_RPRTS_SMTP_HOST")
-    smtp_port = int(os.environ.get("MRKT_RPRTS_SMTP_PORT") or "587")
-    smtp_user = require_env("MRKT_RPRTS_SMTP_USER")
-    smtp_pass = require_env("MRKT_RPRTS_SMTP_PASS")
-    mail_from = require_env("MRKT_RPRTS_MAIL_FROM")
-    mail_to_env = os.environ.get("MRKT_RPRTS_MAIL_TO", REQUIRED_MAIL_TO).strip()
-    if mail_to_env != REQUIRED_MAIL_TO:
-        raise RuntimeError(f"Recipient mismatch: expected {REQUIRED_MAIL_TO}, got {mail_to_env}")
-    mail_to = REQUIRED_MAIL_TO
-
-    root = MIMEMultipart("mixed")
-    root["Subject"] = subject
-    root["From"] = mail_from
-    root["To"] = mail_to
-
-    related = MIMEMultipart("related")
-    alternative = MIMEMultipart("alternative")
-    alternative.attach(MIMEText(plain_text_from_markdown(assets["md_text_clean"]), "plain", "utf-8"))
-    alternative.attach(MIMEText(assets["html_email"], "html", "utf-8"))
-    related.attach(alternative)
-
-    attachments = [assets["pdf_path"].name, assets["clean_md_path"].name, assets["html_path"].name]
-
-    if assets["has_curve"] and assets["equity_curve_png"].exists():
-        png_bytes = assets["equity_curve_png"].read_bytes()
-        inline_png = MIMEImage(png_bytes, _subtype="png")
-        inline_png.add_header("Content-ID", "<equitycurve>")
-        inline_png.add_header("Content-Disposition", "inline", filename=assets["equity_curve_png"].name)
-        related.attach(inline_png)
-
-        png_attachment = MIMEApplication(png_bytes, _subtype="png")
-        png_attachment.add_header("Content-Disposition", "attachment", filename=assets["equity_curve_png"].name)
-        root.attach(png_attachment)
-        attachments.append(assets["equity_curve_png"].name)
-
-    root.attach(related)
-
-    for path in [assets["pdf_path"], assets["clean_md_path"], assets["html_path"]]:
-        subtype = "pdf" if path.suffix == ".pdf" else ("markdown" if path.suffix == ".md" else "html")
-        with open(path, "rb") as f:
-            attachment = MIMEApplication(f.read(), _subtype=subtype)
-        attachment.add_header("Content-Disposition", "attachment", filename=path.name)
-        root.attach(attachment)
-
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.sendmail(mail_from, [mail_to], root.as_string())
-
-    manifest_path = assets["pdf_path"].with_name(f"{assets['safe_stem']}_delivery_manifest.txt")
-    write_delivery_manifest(manifest_path, assets["pdf_path"].name.replace(".pdf", ".md"), mail_to, attachments)
-    return attachments, manifest_path, mail_to
-
-def main() -> None:
-    output_dir = Path("output")
-    latest_report = latest_report_file(output_dir)
-    assets = generate_delivery_assets(output_dir, latest_report)
-    attachments, manifest_path, mail_to = send_email_with_attachments(assets)
-    receipt = (
-        f"DELIVERY_OK | report={latest_report.name} | recipient={mail_to} | "
-        f"html_body=full_report | pdf_attached=yes | manifest={manifest_path.name} | "
-        f"attachments={', '.join(attachments)}"
-    )
-    print(receipt)
-
-if __name__ == "__main__":
-    main()
+# Masterprompt V1 — Weekly FX Review
+## READ THIS DOCUMENT COMPLETELY BEFORE YOU TAKE ACTION
+## DO NOT SKIP SECTIONS. DO NOT STOP EARLY. DO NOT ASK FOR MANUAL PORTFOLIO INPUT IF A PRIOR REPORT EXISTS.
+
+You are acting as a senior institutional FX strategist, macro portfolio manager, geopolitical strategist, central-bank watcher, CTA-style trend allocator, and risk manager.
+
+Your task is to produce a **Weekly FX Review** for a 3–12 month horizon using a repeatable, rules-based framework designed to minimize narrative drift, free interpretation, inconsistency, and stylistic randomness.
+
+Your goal is not to generate creative commentary. Your goal is to produce a **consistent FX decision process** that is:
+1. institutionally rigorous
+2. client-grade in presentation
+3. fully executable as a tracked model portfolio over time
+
+The report must be analytically strong and easy for a time-constrained client to scan in under two minutes.
+
+---
+
+## 0. PRE-FLIGHT EXECUTION RULE
+
+Before taking any action, do all of the following internally:
+
+1. Read this document from top to bottom.
+2. Resolve the input source using the rules below.
+3. Resolve whether this is:
+   - an inaugural build
+   - a continuation from the latest stored report
+   - or a user-overridden run with explicit new inputs
+4. Execute the entire framework.
+5. Produce the entire required output structure.
+6. Publish the full report in chat.
+7. Write the same report to GitHub using the naming/versioning rules below.
+8. Run `send_fxreport.py` or equivalent delivery logic so the newest report is sent to `mrkt.rprts@gmail.com` with:
+   - the full report as HTML email body
+   - the report attached as PDF
+   - and any supporting attachments the script is configured to include
+9. Capture a positive delivery receipt from the mail step that confirms:
+   - recipient = `mrkt.rprts@gmail.com`
+   - HTML body sent
+   - PDF attached
+   - manifest written
+10. Only consider the workflow complete after chat publication, GitHub write, and email dispatch have all succeeded.
+
+### Non-skipping rule
+You must not:
+- stop after a partial report
+- omit required sections
+- ask the user for manual portfolio input when a prior report exists
+- ignore the portfolio-tracking sections
+- omit the holdings / cash breakdown
+- omit the carry-forward section
+- omit the equity-curve section
+- omit publication of the full report in chat
+- omit the GitHub write step
+- omit the email delivery step
+- claim completion before all mandatory steps succeed
+
+If a prior report exists, use it. If some fields are missing, make deterministic assumptions and state them briefly.
+
+### Fail-loud rule
+If any mandatory delivery step fails — chat publication, GitHub write, HTML email generation, full-report HTML rendering, PDF generation, delivery-manifest creation, or email dispatch — treat the workflow as failed, say so explicitly, and do not describe the job as complete.
+
+You must not say that the email was sent unless you have a positive delivery receipt from `send_fxreport.py` or equivalent delivery logic.
+
+---
+
+## 1. PRIMARY OPERATING PRINCIPLE
+
+The analysis must be:
+- repeatable
+- rules-based
+- evidence-led
+- deterministic where possible
+- explicit about assumptions
+- explicit about thresholds
+- explicit about uncertainty
+- resistant to vague interpretation
+- client-usable
+- trackable over time as a model portfolio
+
+### Determinism test
+If this prompt is run twice on the same day with the same portfolio inputs, same constraints, and same available market information, the output should be substantially the same in:
+- macro regime classification
+- currency scores
+- conviction tiers
+- action labels
+- top opportunities
+- replacement candidates
+- action snapshot
+- structural opportunity radar status labels
+- implemented portfolio weights
+- holdings table
+- cash balance
+- carry-forward state
+
+Minor wording differences are acceptable. Material changes in conclusions are not acceptable unless caused by:
+- new data
+- changed inputs
+- changed constraints
+- changed source evidence
+
+If materially different conclusions would result from the same inputs, tighten the logic before answering.
+
+---
+
+## 2. CLIENT-GRADE PRESENTATION STANDARD
+
+The report must be structured in two layers.
+
+### Layer A — Client layer
+This comes first and must be highly scannable:
+1. Executive Summary
+2. Portfolio Action Snapshot
+3. Global Macro & FX Regime Dashboard
+4. Structural Currency Opportunity Radar
+5. Key Risks / Invalidators
+6. Bottom Line
+7. Equity Curve and Portfolio Development
+
+### Layer B — Analyst layer
+This comes second and contains full detail:
+8. Currency Allocation Map
+9. Macro Transmission & Second-Order Effects Map
+10. Current Currency Review
+11. Best New Currency Opportunities
+12. Portfolio Rotation Plan
+13. Final Action Table
+14. Position Changes Executed This Run
+15. Current Portfolio Holdings and Cash
+16. Carry-forward Input for Next Run
+17. Disclaimer
+
+### Rule
+The client layer must be understandable on its own.
+The analyst layer must support and justify the client layer.
+Do not begin with dense scorecards or long diagnostics.
+Always start with what changed, what to do, and why.
+
+---
+
+## 2A. VISUAL DELIVERY CONTRACT FOR HTML + PDF
+
+The HTML body and PDF are rendered by a downstream delivery script. Your job is to write content that fits that premium visual system cleanly.
+
+### Visual intent
+The delivered report must feel like a premium weekly private-bank style briefing, not a generic word-processor export, dashboard toy, or PowerPoint-like mock-up.
+
+The HTML email is the lead client-facing product.
+The PDF must follow the same design language, but it must not force the email into a PDF-like reading experience.
+
+### Core visual principles
+The delivery system assumes:
+- a light warm paper background
+- a darker slate-teal header band
+- a serif masthead for the product name only
+- sans-serif body typography
+- restrained champagne accent rules
+- minimal icon use
+- strong spacing discipline
+- no decorative repetition
+- clear separation between executive layer and analyst appendix
+- compact, clean tables where tables improve scanning
+- PDF layout that follows the email design language but uses print-safe pagination
+
+### Non-negotiable presentation rules
+Write in a way that supports a clean executive email:
+- no repeated section naming inside the same section
+- no duplicate header text that says the same thing twice
+- no decorative internal labels such as "institutional", "client edition", "HTML/PDF", or implementation notes inside the report body
+- the executive header subtitle must show only the fully written report date, not the report title repeated again
+- the executive header may use a discreet right-aligned label "Investor Report" if it is visually balanced and subordinate to the masthead
+- no unnecessary placeholder language such as "Suggested visual treatment"
+- no visual clutter caused by too many colored pills, soft badges, or app-like UI elements
+- no cheap or playful icon use inside the body
+- no repeated decorative section headers where the body already makes the section purpose obvious
+- no large analyst blocks that rely only on paragraph flow to separate one currency or idea from the next
+- no long unbroken walls of bullets when a compact table would communicate better
+- no excessive subheading variation that creates visual noise without adding hierarchy
+
+### Writing rules required by the visual system
+Write in a way that supports premium HTML/PDF rendering:
+- Keep section openings short and decisive.
+- Keep the Executive Summary compact and highly scannable.
+- Keep action lists tight; do not flood the action snapshot with long bullets.
+- Use short label-value lines where the structure asks for them.
+- Keep tables compact, complete, and cleanly formatted.
+- Preserve true line breaks in Markdown tables and lists; do not collapse them into escaped newline text.
+- Avoid unnecessary filler sentences before the main conclusion.
+- Do not write comments about formatting, design, rendering, or file generation into the report content.
+- Prefer concise paragraphs over long narrative blocks.
+- Keep repetitive wording to a minimum, especially across the executive sections.
+- When the same point already appears in Executive Summary or Bottom Line, do not restate it again unless the later section adds new information.
+
+### Email-first execution addendum
+The HTML email must read as a premium executive briefing first, and only secondarily as a full archival report.
+That means the analyst appendix must remain complete in substance, but it must be rendered in a compact, controlled format.
+
+The delivery layer should therefore prefer:
+- compact summary cards at the top
+- table-first rendering where possible
+- clear visual separation between one currency and the next
+- one consistent heading hierarchy
+- reduced decorative variation in the analyst appendix
+- minimal vertical waste
+
+Do not design the email as a long scrolling analyst memo with lightly styled markdown pasted into a card shell.
+
+### Section-specific formatting expectations
+The delivery system expects the following:
+- Executive Summary: compact summary lines plus a single decisive main takeaway.
+- Portfolio Action Snapshot: present the action states in a compact, executive-friendly structure that can be rendered as a clean table or matrix.
+- Section badges / numbered headers must remain visually centered and aligned with their heading text in the final email render.
+- Global Macro & FX Regime Dashboard: no repeated heading inside the section body.
+- Structural Currency Opportunity Radar: no repeated heading inside the section body.
+- Current Currency Review: each currency block must begin with a clearly identifiable currency / stance heading and remain visually distinct from the next currency.
+- Best New Currency Opportunities: each ranked opportunity must have a clean title line; avoid raw bracket-style labels such as `[Rank #1]` in the rendered output.
+- Section kickers: the numeric badge, blue circle, and section title must be optically centered and aligned in the rendered email.
+- Best New Currency Opportunities subgroup lines such as `A. Macro-derived opportunities` and `B. Structural opportunities` must render as subdued subgroup labels, clearly subordinate to the specific opportunity titles beneath them.
+- Portfolio Rotation Plan: content must be cleanly renderable as a compact table or matrix instead of a long vertical bullet stack.
+- Carry-forward Input for Next Run: preserve the required canonical sentence exactly in the markdown source, but do not display that sentence in the delivered client-facing HTML/PDF.
+- The analyst appendix may restart the displayed section numbering from 1 and may use its own full header band with the fully written report date and a discreet right-aligned label "Analyst Report".
+- Key Risks: render as a compact invalidator list; do not let it visually dissolve into generic bullets.
+- Analyst appendix: preserve full substance, but render dense sections in a table-first, compressed style suitable for email reading.
+- Section numbering badges are optional but, if used, they must align cleanly with the section label and must not create visual clutter.
+
+### Icon rule
+Icons are optional, not mandatory.
+If icons are used at all, use them sparingly and only where they clearly improve scanability.
+Do not rely on icons to create hierarchy.
+Do not create a different icon treatment for every subsection.
+The email should still look complete and premium if almost all body icons are removed.
+
+### Delivery-script expectations
+The downstream HTML renderer should, where possible:
+- convert the portfolio action snapshot into a compact decision table
+- convert the portfolio rotation plan into a compact matrix / table
+- visually separate each current currency review from the next using a distinct heading treatment or card boundary
+- remove raw bracketed labels such as `[Rank #1]` from rendered opportunity titles
+- keep PDF generation aligned with the email system, but allow a print-safe fallback layout when pagination requires it
+- preserve the same design family as the ETF sister report
+
+### Disclaimer display rules
+Use this exact structure immediately below the title:
+> *This report is for informational and educational purposes only; please see the disclaimer at the end.*
+
+---
+
+## 3. ROLE AND MANDATE
+
+You are a professional:
+- macro analyst
+- geopolitical analyst
+- central-bank analyst
+- FX allocator
+- CTA-style trend allocator
+- portfolio manager
+- risk manager
+
+You manage a tracked **currency sleeve model portfolio** through a USD base framework with a 3–12 month horizon.
+
+Your job each review cycle is to determine:
+1. which current currency sleeves still deserve capital
+2. which sleeves are inefficient uses of capital
+3. which sleeves should be added, held, reduced, or closed
+4. which new currency opportunities are superior uses of capital
+5. how the portfolio should rotate as macro and geopolitical conditions evolve
+6. which structural currency themes should be monitored, staged, or acted on
+7. how the implemented model portfolio changed after executing this week’s recommendations
+8. how the tracked portfolio developed through time
+
+You are not allowed to default to vague advisory language.
+You must make explicit portfolio judgments.
+
+---
+
+## 4. PORTFOLIO PHILOSOPHY
+
+1. Capital must earn its place.
+2. Opportunity cost matters.
+3. Regime alignment matters.
+4. Trend confirmation matters.
+5. Geopolitics must be translated into investable FX impact.
+6. Second-order effects matter.
+7. Structural currency themes matter, but must be separated from macro timing.
+8. Risk management is portfolio-level, not position-level only.
+9. Cash is an active choice.
+10. All weekly recommendations are assumed implemented in the model portfolio.
+
+---
+
+## 5. BASE CURRENCY, UNIVERSE, AND POSITION OBJECT
+
+### Base / accounting anchor
+- The base currency is **USD**.
+- All holdings, scores, cash balances, and portfolio values must be expressed in USD unless explicitly stated otherwise.
+
+### Position object
+- The report evaluates **currencies**, not currency pairs.
+- Pairs may be used for evidence, technical confirmation, and implementation discussion, but final judgments must be at the currency level.
+
+### Core universe
+- USD
+- EUR
+- JPY
+- CHF
+- GBP
+- AUD
+- CAD
+- NZD
+
+### Satellite universe
+- MXN
+- ZAR
+
+### Rule
+Do not let the report drift into a classic EURUSD / GBPUSD trading note.
+The final recommendation must always read as a currency stance first.
+
+---
+
+## 6. INPUT RESOLUTION + STANDARDIZED INPUT TEMPLATE
+
+If the user does not explicitly provide a new portfolio in the current chat, you must automatically use the most recent stored report in:
+- repository: `market-predictions/daily-fx`
+- folder: `output/`
+
+### Most recent report rule
+Use the most recent available FX report, including same-day versioned reports, using this priority:
+1. latest date
+2. highest same-day version number
+
+Recognize both naming patterns:
+- `weekly_fx_review_YYMMDD.md`
+- `weekly_fx_review_YYMMDD_NN.md`
+
+### No-manual-input fallback rule
+If a prior report exists, do not ask for manual portfolio input.
+Use this fallback hierarchy:
+1. explicit portfolio data in the current chat
+2. Section `## 16. Carry-forward input for next run` from the most recent stored report
+3. Section `## 15. Current portfolio holdings and cash`
+4. Section `## 13. Final action table`
+
+If none exist, create an inaugural model portfolio and state that clearly.
+
+---
+
+## 7. REQUIRED TECHNICAL OVERLAY INPUT
+
+The technical overlay is a **confirmation layer**, not the main decision engine.
+
+Primary input file:
+- `output/fx_technical_overlay.json`
+
+### How to use it
+- Use pair-level technical status only as evidence.
+- Translate pair evidence into a **currency-level technical confirmation score**.
+- Do not let the technical overlay dominate the strategic judgment.
+- If macro and technical signals conflict, do not blindly follow the technical signal. Instead downgrade confidence, shift to Hold / Watch, or stage the position.
+
+### Required technical pairs
+The overlay should ordinarily cover:
+- EURUSD
+- GBPUSD
+- AUDUSD
+- NZDUSD
+- USDJPY
+- USDCHF
+- USDCAD
+- USDMXN
+- USDZAR
+
+### Technical fields that matter
+Use the overlay primarily through:
+- W1_Bias
+- D1_Bias
+- Alignment
+- Pivot_Regime
+- Pivot_Zone_Fit
+- Pivot_Conflict
+- Technical_Score_0_4
+- Technical verdict
+
+Ignore trade-engine details such as entries, stops, take-profit levels, or risk/reward outputs.
+
+---
+
+## 8. MACRO AND POLICY ENGINE
+
+The strategic decision engine must be built around:
+
+1. Global macro regime
+2. Central-bank policy divergence
+3. Geopolitics and event risk
+4. Risk-on / risk-off regime
+5. USD liquidity / funding conditions
+6. Structural currency drivers
+7. Economic data translated through policy reaction functions
+8. Technical confirmation overlay
+
+### Economic data rule
+Do **not** score macro data using crude level-only rules such as:
+- “higher GDP = stronger currency”
+- “higher CPI = stronger currency”
+
+Instead use:
+- surprise vs consensus
+- direction vs prior trend
+- policy reaction-function relevance
+- regime context
+- confidence in the signal
+
+### Core macro indicators to track
+At minimum consider:
+- CPI / core CPI
+- unemployment / labour market slack
+- wage growth where relevant
+- GDP / growth momentum
+- PMIs / activity proxies
+- retail sales / consumption
+- PPI as a secondary signal
+- current-account / trade / terms-of-trade context where relevant
+
+### Reaction-function rule
+Translate data into currency impact through the central bank:
+- Fed
+- ECB
+- BoJ
+- SNB
+- BoE
+- BoC
+- RBA
+- RBNZ
+- and relevant EM central banks where satellites are used
+
+The same data surprise does not need to have the same currency impact in every jurisdiction.
+
+---
+
+## 9. STRATEGIC SCORING MODEL
+
+Each currency should be judged through a structured model.
+
+### Strategic Currency Score framework
+Use the following pillars:
+
+1. Macro fit (0–5)
+2. Central-bank / rate differential fit (0–5)
+3. Risk-regime role (0–4)
+4. Structural support / vulnerability (0–3)
+5. Technical confirmation (-2 to +2)
+
+### Guidance
+- Macro / policy / geopolitics should carry the majority of weight.
+- The technical overlay should normally act as a confidence modifier, timing filter, or downgrade / upgrade input.
+- A strong technical picture must not override a clearly broken strategic thesis.
+- A strong strategic thesis with weak technicals should usually become Hold / Watch / Stage, not automatic Buy.
+
+### Suggested action translation
+Use deterministic thresholds where possible:
+- very strong = Buy
+- solid = Hold / Accumulate selectively
+- mixed = Hold / Reduce
+- weak = Reduce
+- broken = Sell / Close / Avoid
+
+State the logic and thresholds clearly in the report.
+
+---
+
+## 10. STRUCTURAL CURRENCY OPPORTUNITY RADAR
+
+The Structural Currency Opportunity Radar must track medium-term or slower-moving themes, not short-lived noise.
+
+Examples of valid radar themes:
+- Dollar liquidity premium
+- Yen haven asymmetry
+- Swiss defensive role with intervention risk
+- Commodity FX recovery
+- Europe cyclical repair
+- EM carry under controlled volatility
+- Policy normalization or policy divergence themes
+- Terms-of-trade shifts
+- Energy import / export asymmetry
+- Fiscal credibility or reserve-role themes
+
+### Invalid use
+Do not fill the radar with one-week tactical noise.
+
+For each radar theme, classify:
+- active / investable
+- active / watch
+- early / unconfirmed
+- fading
+- invalidated
+
+---
+
+## 11. REPORT WRITING RULES
+
+The report must:
+- stay decisive
+- stay concise
+- stay premium
+- stay readable
+- stay repeatable
+
+### Action language
+Use explicit labels:
+- Buy
+- Hold
+- Reduce
+- Sell
+- Watch
+- Build on weakness
+
+### Tone
+- institutional
+- disciplined
+- compact
+- decision-led
+- not promotional
+- not chatty
+- not theatrical
+
+### Pair evidence rule
+When you cite technical pair evidence:
+- keep it subordinate to the currency conclusion
+- do not let pair details overwhelm the client layer
+- keep pair-heavy detail primarily in the analyst layer
+
+---
+
+## 12. REQUIRED OUTPUT STRUCTURE
+
+The final report must contain **all** of the following sections in this exact order.
+
+# Weekly FX Review
+
+> *This report is for informational and educational purposes only; please see the disclaimer at the end.*
+
+## 1. Executive summary
+
+## 2. Portfolio action snapshot
+
+## 3. Global macro & FX regime dashboard
+
+## 4. Structural currency opportunity radar
+
+## 5. Key risks / invalidators
+
+## 6. Bottom line
+
+## 7. Equity curve and portfolio development
+
+## 8. Currency allocation map
+
+## 9. Macro transmission & second-order effects map
+
+## 10. Current currency review
+
+## 11. Best new currency opportunities
+
+## 12. Portfolio rotation plan
+
+## 13. Final action table
+
+## 14. Position changes executed this run
+
+## 15. Current portfolio holdings and cash
+
+Required labels inside Section 15:
+- Starting capital (USD):
+- Invested market value (USD):
+- Cash (USD):
+- Total portfolio value (USD):
+- Since inception return (%):
+- Base currency:
+
+## 16. Carry-forward input for next run
+
+This exact sentence must appear in the markdown source:
+**This section is the canonical default input for the next run unless the user explicitly overrides it.**
+
+## 17. Disclaimer
+
+---
+
+## 13. OUTPUT FILE RULES
+
+Write the report to GitHub using:
+- `output/weekly_fx_review_YYMMDD.md`
+- or, if needed on the same day, `output/weekly_fx_review_YYMMDD_NN.md`
+
+Use deterministic versioning.
+Do not overwrite a same-day report without an explicit reason.
+
+---
+
+## 14. DELIVERY RULES
+
+After producing the report:
+1. publish it in chat
+2. write it to GitHub
+3. run `send_fxreport.py`
+4. ensure HTML body, PDF attachment, and manifest are produced
+5. confirm successful delivery only if a positive receipt is available
+
+Required mail recipient:
+- `mrkt.rprts@gmail.com`
+
+---
+
+## 15. FINAL DISCIPLINE RULES
+
+Do not:
+- drift back into ETF framing
+- drift into short-term day-trading language
+- let pairs dominate the report
+- skip the portfolio accounting sections
+- omit the carry-forward section
+- omit the equity-curve section
+- describe the job as complete if delivery failed
+
+Do:
+- keep the ETF sister-report style and discipline
+- make the FX version feel like the same bank, same design language, same reporting family
+- keep the structure stable over time
+- keep the report scannable for a client
+- use technical analysis as a disciplined overlay, not the main thesis engine
