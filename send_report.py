@@ -483,8 +483,8 @@ def preprocess_markdown_block(text: str, image_src: str | None = None) -> str:
         is_bullet = lstripped.startswith("- ") or bool(re.match(r"^\d+\.\s+", lstripped))
         is_table = is_markdown_table_line(line)
 
-        if stripped in {"A. Macro-derived opportunities", "B. Structural opportunities"} and lstripped.startswith("### "):
-            append_line(f"#### {stripped}", before_blank=True)
+        if stripped in {"A. Macro-derived opportunities", "B. Structural opportunities"}:
+            append_line(f"##### {stripped}", before_blank=True)
             processed.append("")
             i += 1
             continue
@@ -937,33 +937,44 @@ def build_report_html(
       break-inside: avoid-page;
     }}
     .section-kicker {{
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      width: auto;
+      border-collapse: collapse;
       margin: 0 0 18px 0;
     }}
+    .section-kicker td {{
+      vertical-align: middle;
+    }}
+    .section-badge-cell {{
+      width: 56px;
+      padding: 0 14px 0 0;
+      vertical-align: middle;
+    }}
+    .section-label-cell {{
+      padding: 0;
+      vertical-align: middle;
+    }}
     .section-badge {{
-      width: 38px;
-      height: 38px;
+      width: 42px;
+      height: 42px;
       border-radius: 999px;
       background: #2A5384;
       color: #ffffff;
       font-weight: 700;
-      font-size: 17px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex: 0 0 auto;
-      line-height: 1;
+      font-size: 18px;
+      display: block;
+      text-align: center;
+      line-height: 42px;
+      mso-line-height-rule: exactly;
     }}
     .section-label {{
-      font-size: 13px;
+      display: block;
+      font-size: 14px;
       font-weight: 700;
-      letter-spacing: .06em;
+      letter-spacing: .08em;
       text-transform: uppercase;
       color: {BRAND['muted']};
-      line-height: 1;
-      transform: none;
+      line-height: 1.1;
+      mso-line-height-rule: exactly;
     }}
     .summary-line {{
       margin: 0 0 12px 0;
@@ -1091,6 +1102,14 @@ def build_report_html(
       font-weight: 700;
       margin: 18px 0 8px 0;
     }}
+    .panel h5 {{
+      color: {BRAND['muted']};
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .10em;
+      font-weight: 700;
+      margin: 12px 0 16px 0;
+    }}
     .panel blockquote {{
       margin: 12px 0;
       padding: 10px 12px;
@@ -1145,16 +1164,33 @@ def build_report_html(
       font-size: 17px;
     }}
     .panel-opportunities h3 {{
-      margin-top: 22px;
-      font-size: 22px;
+      margin: 0 0 8px 0;
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.28;
+      color: {BRAND['ink']};
+    }}
+    .panel-opportunities h4 {{
+      margin: 16px 0 8px 0;
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: {BRAND['muted']};
+    }}
+    .panel-opportunities h5 {{
+      margin: 8px 0 18px 0;
+      font-size: 12px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: {BRAND['muted']};
       font-weight: 700;
     }}
-    .panel-opportunities h4:first-of-type {{
-      margin-top: 10px;
+    .panel-opportunities h5 + h3 {{
+      margin-top: 0;
     }}
     .panel-opportunities a {{
       display: inline-block;
-      margin: 0 0 12px 0;
+      margin: 0 0 16px 0;
       font-size: 14px;
     }}
     .panel-carry > p:first-of-type {{
