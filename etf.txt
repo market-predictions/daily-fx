@@ -1,5 +1,5 @@
 
-# Masterprompt V13 - Weekly IBKR ETF Portfolio Review
+# Masterprompt V14 - Weekly IBKR ETF Portfolio Review
 
 -- READ THIS DOCUMENT COMPLETELY BEFORE YOU TAKE ACTION !!! --
 -- DO NOT SKIP SECTIONS. DO NOT STOP EARLY. DO NOT ASK FOR MANUAL PORTFOLIO INPUT IF A PRIOR REPORT EXISTS. --
@@ -219,6 +219,8 @@ The delivery system expects the following:
 - Structural Opportunity Radar: no repeated heading inside the section body.
 - Current Position Review: each ticker block must begin with a clearly identifiable ticker / ETF heading and remain visually distinct from the next ticker.
 - Best New Opportunities: each ranked opportunity must have a clean title line; avoid raw bracket-style labels such as `[Rank #1]` in the rendered output.
+- Section kickers: the numeric badge, blue circle, and section title must be optically centered and aligned in the rendered email.
+- Best New Opportunities subgroup lines such as `A. Macro-derived opportunities` and `B. Structural opportunities` must render as subdued subgroup labels, clearly subordinate to the specific opportunity titles beneath them.
 - Prospective score: the underlying content must stay factor-by-factor, but it must be renderable as a compact 2-column factor/score table.
 - Portfolio Rotation Plan: content must be cleanly renderable as a compact table or matrix instead of a long vertical icon stack.
 - Carry-forward Input for Next Run: preserve the required canonical sentence exactly, but keep the rest structured and table-friendly.
