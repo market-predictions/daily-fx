@@ -139,6 +139,9 @@ Always start with what changed, what to do, and why.
 
 ## 2A. VISUAL DELIVERY CONTRACT FOR HTML + PDF
 
+The HTML body and PDF are rendered by a downstream delivery script. Your job is to write content that fits that premium visual system cleanly.
+
+### Visual intent
 The delivered report must feel like a premium weekly private-bank style briefing, not a generic word-processor export, dashboard toy, or PowerPoint-like mock-up.
 
 The HTML email is the lead client-facing product.
@@ -153,18 +156,87 @@ The delivery system assumes:
 - restrained champagne accent rules
 - minimal icon use
 - strong spacing discipline
+- no decorative repetition
+- clear separation between executive layer and analyst appendix
 - compact, clean tables where tables improve scanning
 - PDF layout that follows the email design language but uses print-safe pagination
+
+### Non-negotiable presentation rules
+Write in a way that supports a clean executive email:
+- no repeated section naming inside the same section
+- no duplicate header text that says the same thing twice
+- no decorative internal labels such as "institutional", "client edition", "HTML/PDF", or implementation notes inside the report body
+- the executive header subtitle must show only the fully written report date, not the report title repeated again
+- the executive header may use a discreet right-aligned label "Investor Report" if it is visually balanced and subordinate to the masthead
+- no unnecessary placeholder language such as "Suggested visual treatment"
+- no visual clutter caused by too many colored pills, soft badges, or app-like UI elements
+- no cheap or playful icon use inside the body
+- no repeated decorative section headers where the body already makes the section purpose obvious
+- no large analyst blocks that rely only on paragraph flow to separate one currency or idea from the next
+- no long unbroken walls of bullets when a compact table would communicate better
+- no excessive subheading variation that creates visual noise without adding hierarchy
 
 ### Writing rules required by the visual system
 Write in a way that supports premium HTML/PDF rendering:
 - Keep section openings short and decisive.
 - Keep the Executive Summary compact and highly scannable.
-- Keep action lists tight.
+- Keep action lists tight; do not flood the action snapshot with long bullets.
 - Use short label-value lines where the structure asks for them.
 - Keep tables compact, complete, and cleanly formatted.
+- Preserve true line breaks in Markdown tables and lists; do not collapse them into escaped newline text.
 - Avoid unnecessary filler sentences before the main conclusion.
 - Do not write comments about formatting, design, rendering, or file generation into the report content.
+- Prefer concise paragraphs over long narrative blocks.
+- Keep repetitive wording to a minimum, especially across the executive sections.
+- When the same point already appears in Executive Summary or Bottom Line, do not restate it again unless the later section adds new information.
+
+### Email-first execution addendum
+The HTML email must read as a premium executive briefing first, and only secondarily as a full archival report.
+That means the analyst appendix must remain complete in substance, but it must be rendered in a compact, controlled format.
+
+The delivery layer should therefore prefer:
+- compact summary cards at the top
+- table-first rendering where possible
+- clear visual separation between one currency and the next
+- one consistent heading hierarchy
+- reduced decorative variation in the analyst appendix
+- minimal vertical waste
+
+Do not design the email as a long scrolling analyst memo with lightly styled markdown pasted into a card shell.
+
+### Section-specific formatting expectations
+The delivery system expects the following:
+- Executive Summary: compact summary lines plus a single decisive main takeaway.
+- Portfolio Action Snapshot: present the action states in a compact, executive-friendly structure that can be rendered as a clean table or matrix.
+- Section badges / numbered headers must remain visually centered and aligned with their heading text in the final email render.
+- Global Macro & FX Regime Dashboard: no repeated heading inside the section body.
+- Structural Currency Opportunity Radar: no repeated heading inside the section body.
+- Current Currency Review: each currency block must begin with a clearly identifiable currency / stance heading and remain visually distinct from the next currency.
+- Best New Currency Opportunities: each ranked opportunity must have a clean title line; avoid raw bracket-style labels such as `[Rank #1]` in the rendered output.
+- Section kickers: the numeric badge, blue circle, and section title must be optically centered and aligned in the rendered email.
+- Best New Currency Opportunities subgroup lines such as `A. Macro-derived opportunities` and `B. Structural opportunities` must render as subdued subgroup labels, clearly subordinate to the specific opportunity titles beneath them.
+- Portfolio Rotation Plan: content must be cleanly renderable as a compact table or matrix instead of a long vertical bullet stack.
+- Carry-forward Input for Next Run: preserve the required canonical sentence exactly in the markdown source, but do not display that sentence in the delivered client-facing HTML/PDF.
+- The analyst appendix may restart the displayed section numbering from 1 and may use its own full header band with the fully written report date and a discreet right-aligned label "Analyst Report".
+- Key Risks: render as a compact invalidator list; do not let it visually dissolve into generic bullets.
+- Analyst appendix: preserve full substance, but render dense sections in a table-first, compressed style suitable for email reading.
+- Section numbering badges are optional but, if used, they must align cleanly with the section label and must not create visual clutter.
+
+### Icon rule
+Icons are optional, not mandatory.
+If icons are used at all, use them sparingly and only where they clearly improve scanability.
+Do not rely on icons to create hierarchy.
+Do not create a different icon treatment for every subsection.
+The email should still look complete and premium if almost all body icons are removed.
+
+### Delivery-script expectations
+The downstream HTML renderer should, where possible:
+- convert the portfolio action snapshot into a compact decision table
+- convert the portfolio rotation plan into a compact matrix / table
+- visually separate each current currency review from the next using a distinct heading treatment or card boundary
+- remove raw bracketed labels such as `[Rank #1]` from rendered opportunity titles
+- keep PDF generation aligned with the email system, but allow a print-safe fallback layout when pagination requires it
+- preserve the same design family as the ETF sister report
 
 ### Disclaimer display rules
 Use this exact structure immediately below the title:
