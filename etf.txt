@@ -174,6 +174,8 @@ Write in a way that supports a clean executive email:
 - no repeated section naming inside the same section
 - no duplicate header text that says the same thing twice
 - no decorative internal labels such as "institutional", "client edition", "HTML/PDF", or implementation notes inside the report body
+- the executive header subtitle must show only the fully written report date, not the report title repeated again
+- the executive header may use a discreet right-aligned label "Investor Report" if it is visually balanced and subordinate to the masthead
 - no unnecessary placeholder language such as "Suggested visual treatment"
 - no visual clutter caused by too many colored pills, soft badges, or app-like UI elements
 - no cheap or playful icon use inside the body
@@ -223,7 +225,9 @@ The delivery system expects the following:
 - Best New Opportunities subgroup lines such as `A. Macro-derived opportunities` and `B. Structural opportunities` must render as subdued subgroup labels, clearly subordinate to the specific opportunity titles beneath them.
 - Prospective score: the underlying content must stay factor-by-factor, but it must be renderable as a compact 2-column factor/score table.
 - Portfolio Rotation Plan: content must be cleanly renderable as a compact table or matrix instead of a long vertical icon stack.
-- Carry-forward Input for Next Run: preserve the required canonical sentence exactly, but keep the rest structured and table-friendly.
+- Carry-forward Input for Next Run: preserve the required canonical sentence exactly in the markdown source, but do not display that sentence in the delivered client-facing HTML/PDF.
+- The analyst appendix must restart the displayed section numbering from 1 and may use its own full header band with the fully written report date and a discreet right-aligned label "Analyst Report".
+- In Best New Opportunities, subgroup lines such as "A. Macro-derived opportunities" and "B. Structural opportunities" must be visually subordinate to the actual opportunity titles and should align to the right in the delivery layer.
 
 - Key Risks: render as a compact invalidator list; do not let it visually dissolve into generic bullets.
 - Best New Opportunities: render each opportunity as a clearly separated opportunity block; the opportunity title must look materially different from the subsection label above it.
