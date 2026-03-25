@@ -5,10 +5,10 @@ on:
   push:
     paths:
       - 'fx.txt'
-      - 'send_fxreport.py'
       - 'fx_technical_overlay.py'
+      - 'fx_portfolio_engine.py'
+      - 'send_fxreport.py'
       - '.github/workflows/send-weekly-fxreport.yml'
-      - 'output/weekly_fx_review_*.md'
 
 permissions:
   contents: write
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   send-fx-report:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Check out repository
@@ -41,30 +41,47 @@ jobs:
       - name: Build FX technical overlay
         env:
           TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
-          TWELVEDATA_CALLS_PER_MINUTE: "8"
-          TWELVEDATA_RATE_LIMIT_WINDOW_SECONDS: "60"
-          TWELVEDATA_RATE_LIMIT_BUFFER_SECONDS: "1.0"
-          TWELVEDATA_MAX_RETRIES: "5"
-          TWELVEDATA_HTTP_TIMEOUT_SECONDS: "30"
+          TWELVEDATA_CALLS_PER_MINUTE: '8'
+          TWELVEDATA_RATE_LIMIT_WINDOW_SECONDS: '60'
+          TWELVEDATA_RATE_LIMIT_BUFFER_SECONDS: '1.0'
+          TWELVEDATA_MAX_RETRIES: '5'
+          TWELVEDATA_HTTP_TIMEOUT_SECONDS: '30'
         run: |
           python fx_technical_overlay.py
 
-      - name: Commit FX technical overlay if changed
+      - name: Update FX portfolio state
+        env:
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          TWELVEDATA_CALLS_PER_MINUTE: '8'
+          TWELVEDATA_RATE_LIMIT_WINDOW_SECONDS: '60'
+          TWELVEDATA_RATE_LIMIT_BUFFER_SECONDS: '1.0'
+          TWELVEDATA_MAX_RETRIES: '5'
+          TWELVEDATA_HTTP_TIMEOUT_SECONDS: '30'
+        run: |
+          python fx_portfolio_engine.py
+
+      - name: Commit generated portfolio artifacts if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if [ ! -f output/fx_technical_overlay.json ]; then
-            echo "fx_technical_overlay.json not found; failing."
-            exit 1
-          fi
+          test -f output/fx_technical_overlay.json
+          test -f output/fx_portfolio_state.json
+          test -f output/fx_trade_ledger.csv
+          test -f output/fx_valuation_history.csv
+          test -f output/fx_recommendation_scorecard.csv
 
-          git add output/fx_technical_overlay.json
+          git add \
+            output/fx_technical_overlay.json \
+            output/fx_portfolio_state.json \
+            output/fx_trade_ledger.csv \
+            output/fx_valuation_history.csv \
+            output/fx_recommendation_scorecard.csv
 
           if git diff --cached --quiet; then
-            echo "No changes in fx_technical_overlay.json; nothing to commit."
+            echo "No portfolio artifact changes; nothing to commit."
           else
-            git commit -m "Update FX technical overlay"
+            git commit -m "Update FX overlay and portfolio artifacts [skip ci]"
             git push
           fi
 
