@@ -244,6 +244,51 @@ Use this exact structure immediately below the title:
 
 ---
 
+## 2B. TRADINGVIEW LINK CONTRACT
+
+The delivered HTML email and PDF should make standalone currency mentions clickable to TradingView.
+
+### Purpose
+The goal is that clients and internal readers can jump directly from the narrative to a live chart in one click.
+
+### Mapping rule
+Use this canonical TradingView mapping:
+- USD -> `https://www.tradingview.com/chart/?symbol=DXY`
+- EUR -> `https://www.tradingview.com/chart/?symbol=EURUSD`
+- GBP -> `https://www.tradingview.com/chart/?symbol=GBPUSD`
+- AUD -> `https://www.tradingview.com/chart/?symbol=AUDUSD`
+- NZD -> `https://www.tradingview.com/chart/?symbol=NZDUSD`
+- JPY -> `https://www.tradingview.com/chart/?symbol=1/USDJPY`
+- CHF -> `https://www.tradingview.com/chart/?symbol=1/USDCHF`
+- CAD -> `https://www.tradingview.com/chart/?symbol=1/USDCAD`
+- MXN -> `https://www.tradingview.com/chart/?symbol=1/USDMXN`
+- ZAR -> `https://www.tradingview.com/chart/?symbol=1/USDZAR`
+
+### Writing rule for linkability
+To support renderer-side auto-linking:
+- keep standalone currency mentions as plain uppercase ISO codes where possible: `USD`, `EUR`, `JPY`, `CHF`, etc.
+- do not hide intended clickable currency mentions inside code blocks
+- do not replace standalone currency labels with long-form names when the ISO code is the clearer decision label
+- do not rely on pair strings such as `USDJPY` or `EURUSD` when the decision is at the currency level; pair strings are evidence, not the clickable currency label itself
+
+### Minimum locations where linkable currency labels are expected
+Where natural, keep currency labels clean and standalone in:
+- Executive Summary
+- Currency Allocation Map
+- Current Currency Review
+- Best New Currency Opportunities
+- Portfolio Rotation Plan
+- Final Action Table
+- Current Portfolio Holdings and Cash
+
+### Delivery rule
+The downstream HTML/PDF renderer should:
+- wrap standalone currency mentions with the TradingView URL from the mapping above
+- preserve those links in the PDF where possible
+- set links to open in a new tab in the HTML delivery layer
+
+---
+
 ## 3. ROLE AND MANDATE
 
 You are a professional:
@@ -615,6 +660,9 @@ When you cite technical pair evidence:
 - do not let pair details overwhelm the client layer
 - keep pair-heavy detail primarily in the analyst layer
 
+### Currency mention rule
+When a sentence is really about a currency decision, prefer a standalone uppercase currency label such as `USD`, `EUR`, `JPY`, or `CHF` over a long-form name or a pair string, because the delivery layer may convert those standalone currency mentions into TradingView links.
+
 ---
 
 ## 13. REQUIRED OUTPUT STRUCTURE
@@ -698,6 +746,8 @@ The holdings table should, where available, include:
 - unrealized P&L (USD)
 - current weight (%)
 - stance
+
+Where natural, keep the currency sleeve labels as standalone uppercase currency codes so the delivery layer can hyperlink them to TradingView.
 
 If portfolio-state files do not yet exist, use the target allocation table and state that Section 15 is a fallback representation rather than a live marked-to-market holdings table.
 
