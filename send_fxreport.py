@@ -5,9 +5,9 @@ send_fxreport.py
 Validate the newest Weekly FX Review markdown, render premium HTML/PDF,
 and send it to the configured recipient.
 
-This version is intentionally styling-focused. It keeps the FX content model intact
-but upgrades the delivery layer so the FX report matches the ETF sister-report's
-executive look & feel more closely.
+This version keeps the styling-focused delivery layer intact, and adds
+TradingView hyperlinks for standalone currency mentions in the rendered
+HTML/PDF so clients can jump directly to the relevant chart.
 """
 
 from __future__ import annotations
@@ -89,6 +89,21 @@ DATE_PATTERNS = [
     "%d %B %Y",
     "%Y-%m-%d",
 ]
+
+TRADINGVIEW_CURRENCY_URLS = {
+    "USD": "https://www.tradingview.com/chart/?symbol=DXY",
+    "EUR": "https://www.tradingview.com/chart/?symbol=EURUSD",
+    "GBP": "https://www.tradingview.com/chart/?symbol=GBPUSD",
+    "AUD": "https://www.tradingview.com/chart/?symbol=AUDUSD",
+    "NZD": "https://www.tradingview.com/chart/?symbol=NZDUSD",
+    "JPY": "https://www.tradingview.com/chart/?symbol=1/USDJPY",
+    "CHF": "https://www.tradingview.com/chart/?symbol=1/USDCHF",
+    "CAD": "https://www.tradingview.com/chart/?symbol=1/USDCAD",
+    "MXN": "https://www.tradingview.com/chart/?symbol=1/USDMXN",
+    "ZAR": "https://www.tradingview.com/chart/?symbol=1/USDZAR",
+}
+CURRENCY_MENTION_RE = re.compile(r"(?<![A-Za-z0-9/])(" + "|".join(TRADINGVIEW_CURRENCY_URLS.keys()) + r")(?![A-Za-z0-9/])")
+ANCHOR_OR_CODE_RE = re.compile(r"(<a\b[^>]*>.*?</a>|<code>.*?</code>)", re.IGNORECASE | re.DOTALL)
 
 BRAND = {
     "paper": "#F6F2EC",
@@ -244,14 +259,52 @@ def clean_inline(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def ensure_anchor_targets(html_text: str) -> str:
+    def repl(match: re.Match[str]) -> str:
+        anchor = match.group(0)
+        if "target=" not in anchor:
+            anchor = anchor[:-1] + ' target="_blank" rel="noopener noreferrer">'
+        elif "rel=" not in anchor:
+            anchor = anchor[:-1] + ' rel="noopener noreferrer">'
+        return anchor
+    return re.sub(r"<a\b[^>]*>", repl, html_text, flags=re.IGNORECASE)
+
+
+def link_tradingview_mentions(html_text: str) -> str:
+    placeholders: list[str] = []
+
+    def protect(match: re.Match[str]) -> str:
+        placeholders.append(match.group(0))
+        return f"@@TVPLACEHOLDER{len(placeholders)-1}@@"
+
+    protected = ANCHOR_OR_CODE_RE.sub(protect, html_text)
+
+    def repl(match: re.Match[str]) -> str:
+        code = match.group(1)
+        url = TRADINGVIEW_CURRENCY_URLS[code]
+        return f'<a class="tv-link" href="{esc(url)}" target="_blank" rel="noopener noreferrer">{code}</a>'
+
+    protected = CURRENCY_MENTION_RE.sub(repl, protected)
+
+    for idx, original in enumerate(placeholders):
+        protected = protected.replace(f"@@TVPLACEHOLDER{idx}@@", original)
+    return protected
+
+
 def markdown_to_html(md: str) -> str:
     md = preprocess_markdown(md)
     if markdown_lib is not None:
         try:
-            return markdown_lib.markdown(md, extensions=["tables", "sane_lists", "nl2br"])
+            html_text = markdown_lib.markdown(md, extensions=["tables", "sane_lists", "nl2br"])
+            html_text = link_tradingview_mentions(html_text)
+            html_text = ensure_anchor_targets(html_text)
+            return html_text
         except Exception:
             pass
-    return simple_markdown_to_html(md)
+    html_text = simple_markdown_to_html(md)
+    html_text = link_tradingview_mentions(html_text)
+    html_text = ensure_anchor_targets(html_text)
+    return html_text
 
 
 def preprocess_markdown(text: str) -> str:
@@ -419,7 +472,7 @@ def extract_summary_cards(sections: list[Section]) -> list[tuple[str, str]]:
         if base:
             cards.append(("Base currency", base))
     while len(cards) < 3:
-        cards.append((f"FX review", "Disciplined weekly allocation framework"))
+        cards.append(("FX review", "Disciplined weekly allocation framework"))
     return cards[:3]
 
 
@@ -459,10 +512,10 @@ def render_action_snapshot(section: Section, display_number: int) -> str:
         else:
             extras.append(stripped)
 
-    table_rows = "".join(f"<tr><th>{esc(k)}</th><td>{esc(v)}</td></tr>" for k, v in rows)
+    table_rows = "".join(f"<tr><th>{esc(k)}</th><td>{markdown_to_html(v)}</td></tr>" for k, v in rows)
     extras_html = ""
     if extras:
-        items = "".join(f"<li>{esc(item)}</li>" for item in extras)
+        items = "".join(f"<li>{markdown_to_html(item)}</li>" for item in extras)
         extras_html = f"<div class='subblock'><div class='subblock-title'>Notes</div><ul>{items}</ul></div>"
     return (
         f"<div class='panel panel-snapshot'>"
@@ -495,9 +548,11 @@ def render_currency_review(section: Section, display_number: int) -> str:
     cards = []
     for title, body in blocks:
         body_html = markdown_to_html(body)
+        title_html = link_tradingview_mentions(esc(title))
+        title_html = ensure_anchor_targets(title_html)
         cards.append(
             "<article class='currency-card'>"
-            f"<div class='currency-card-title'>{esc(title)}</div>"
+            f"<div class='currency-card-title'>{title_html}</div>"
             f"<div class='currency-card-body'>{body_html}</div>"
             "</article>"
         )
@@ -533,7 +588,7 @@ def render_rotation_plan(section: Section, display_number: int) -> str:
     for col in cols:
         items = groups.get(col, [])
         if items:
-            content = "<ul>" + "".join(f"<li>{esc(item)}</li>" for item in items) + "</ul>"
+            content = "<ul>" + "".join(f"<li>{markdown_to_html(item)}</li>" for item in items) + "</ul>"
         else:
             content = "<div class='empty-cell'>None</div>"
         cells.append(f"<td>{content}</td>")
@@ -556,6 +611,14 @@ body {{
   color: {BRAND['ink']};
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
+}}
+a.tv-link {{
+  color: #2A5384;
+  text-decoration: none;
+  border-bottom: 1px dotted {BRAND['champagne']};
+}}
+a.tv-link:hover {{
+  text-decoration: underline;
 }}
 .report-shell {{
   max-width: 1180px;
@@ -972,7 +1035,7 @@ def build_report_html(md_text: str, report_date_str: str, image_src: str | None 
             + "".join(analyst_panels)
         )
 
-    return f"""<!doctype html>
+    html_doc = f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -997,6 +1060,7 @@ def build_report_html(md_text: str, report_date_str: str, image_src: str | None 
   </div>
 </body>
 </html>""".strip()
+    return ensure_anchor_targets(html_doc)
 
 
 def plain_text_from_markdown(md_text: str) -> str:
