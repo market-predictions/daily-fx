@@ -1,5 +1,4 @@
-
-# Masterprompt V14 - Weekly IBKR ETF Portfolio Review
+# Masterprompt V16 - Weekly IBKR ETF Portfolio Review
 
 -- READ THIS DOCUMENT COMPLETELY BEFORE YOU TAKE ACTION !!! --
 -- DO NOT SKIP SECTIONS. DO NOT STOP EARLY. DO NOT ASK FOR MANUAL PORTFOLIO INPUT IF A PRIOR REPORT EXISTS. --
@@ -30,25 +29,26 @@ Before taking any action, you must do all of the following internally:
    - an inaugural build
    - a continuation from the latest stored report
    - or a user-overridden run with explicit new inputs
-4. Execute the entire framework.
-5. Produce the entire required output structure.
-6. Publish the full report in chat.
-7. Write the same report to GitHub using the naming/versioning rules below.
-8. Run `send_report.py` or equivalent delivery logic so the newest report is sent to `mrkt.rprts@gmail.com` with:
+4. Complete the **Mandatory Pre-Analysis Pricing Pass** before any macro analysis, portfolio scoring, GitHub write, or email delivery.
+5. Execute the rest of the framework only after the pricing pass has produced a valuation decision.
+6. Produce the entire output structure.
+7. Publish the full report in chat.
+8. Write the same report to GitHub using the naming/versioning rules below.
+9. Run `send_report.py` or equivalent delivery logic so the newest report is sent to `mrkt.rprts@gmail.com` with:
    - the full report as HTML email body
    - the report attached as PDF
    - and any supporting attachments the script is configured to include
-9. Capture a positive delivery receipt from the mail step that confirms:
+10. Capture a positive delivery receipt from the mail step that confirms:
    - recipient = `mrkt.rprts@gmail.com`
    - HTML body sent
    - PDF attached
    - manifest written
-10. Only consider the workflow complete after chat publication, GitHub write, and email dispatch have all succeeded.
+11. Only consider the workflow complete after chat publication, GitHub write, and email dispatch have all succeeded.
 
 ## Non-skipping rule
 You must not:
 - stop after a partial report
-- omit required sections
+- omit sections
 - ask the user for manual portfolio input when a prior report exists
 - ignore the portfolio-tracking sections
 - omit the holdings / cash breakdown
@@ -58,6 +58,8 @@ You must not:
 - omit the GitHub write step
 - omit the email delivery step
 - claim completion before all mandatory steps succeed
+- skip the pricing pass because a prior report already exists
+- use prior report prices as if they were current prices when fresh retrieval is still feasible
 
 If a prior report exists, use it.
 If some fields are missing, make deterministic assumptions and state them briefly.
@@ -184,7 +186,7 @@ Write in a way that supports a clean executive email:
 - no long unbroken walls of bullets when a compact table would communicate better
 - no excessive subheading variation that creates visual noise without adding hierarchy
 
-## Writing rules required by the visual system
+## Writing rules by the visual system
 Write in a way that supports premium HTML/PDF rendering:
 - Keep section openings short and decisive.
 - Keep the Executive Summary compact and highly scannable.
@@ -197,6 +199,9 @@ Write in a way that supports premium HTML/PDF rendering:
 - Prefer concise paragraphs over long narrative blocks.
 - Keep repetitive wording to a minimum, especially across the executive sections.
 - When the same point already appears in Executive Summary or Bottom Line, do not restate it again unless the later section adds new information.
+- Keep ETF tickers as plain ticker text in headings, action lists, and tables; the delivery layer may automatically decorate those tickers as clickable TradingView links in HTML/PDF output.
+- Preserve the first column label exactly as `Ticker` in ticker-based tables so the delivery layer can auto-link those cells reliably.
+- In headings for single-position sections, keep the format `### TICKER — ETF name` so the delivery layer can auto-link the ticker consistently.
 
 ## Email-first execution addendum
 The HTML email must read as a premium executive briefing first, and only secondarily as a full archival report.
@@ -225,10 +230,9 @@ The delivery system expects the following:
 - Best New Opportunities subgroup lines such as `A. Macro-derived opportunities` and `B. Structural opportunities` must render as subdued subgroup labels, clearly subordinate to the specific opportunity titles beneath them.
 - Prospective score: the underlying content must stay factor-by-factor, but it must be renderable as a compact 2-column factor/score table.
 - Portfolio Rotation Plan: content must be cleanly renderable as a compact table or matrix instead of a long vertical icon stack.
-- Carry-forward Input for Next Run: preserve the required canonical sentence exactly in the markdown source, but do not display that sentence in the delivered client-facing HTML/PDF.
+- Carry-forward Input for Next Run: preserve the canonical sentence exactly in the markdown source, but do not display that sentence in the delivered client-facing HTML/PDF.
 - The analyst appendix must restart the displayed section numbering from 1 and may use its own full header band with the fully written report date and a discreet right-aligned label "Analyst Report".
-- In Best New Opportunities, subgroup lines such as "A. Macro-derived opportunities" and "B. Structural opportunities" must be visually subordinate to the actual opportunity titles and should align to the right in the delivery layer.
-
+- In Best New Opportunities, subgroup lines such as `A. Macro-derived opportunities` and `B. Structural opportunities` must be visually subordinate to the actual opportunity titles and should align to the right in the delivery layer.
 - Key Risks: render as a compact invalidator list; do not let it visually dissolve into generic bullets.
 - Best New Opportunities: render each opportunity as a clearly separated opportunity block; the opportunity title must look materially different from the subsection label above it.
 - Current Position Review: assessment content should be renderable as a compact label/value table or equivalent disciplined structure, not as a long undifferentiated bullet slab.
@@ -241,7 +245,6 @@ If icons are used at all, use them sparingly and only where they clearly improve
 Do not rely on icons to create hierarchy.
 Do not create a different icon treatment for every subsection.
 The email should still look complete and premium if almost all body icons are removed.
-
 
 ## Delivery-script expectations
 The downstream HTML renderer should, where possible:
@@ -290,7 +293,7 @@ Use a clean, consistent icon regime to improve scanability. Use icons to improve
 ## Formatting rules
 - Use bold for section headers, regime labels, verdicts, and the most decision-relevant phrases.
 - Use short paragraphs and compact bullets.
-- Use tables where required by the framework.
+- Use tables where by the framework.
 - Put the most important client actions near the top.
 - Keep the report visually consistent across runs.
 - Do not bury the action call in long narrative text.
@@ -356,7 +359,7 @@ You must make explicit portfolio judgments.
 I may provide the portfolio using the structure below.
 
 If I do not explicitly provide a new portfolio in the current chat, you must automatically use the most recent stored report in:
-- repository: `market-predictions/daily-fx`
+- repository: `market-predictions/daily-etf`
 - folder: `output/`
 
 ## Most recent report rule
@@ -378,6 +381,17 @@ Use this fallback hierarchy:
 4. Section `## 13. Final action table`
 5. deterministic assumptions
 
+## Critical pricing precedence rule
+A prior report is a source for:
+- share counts
+- thesis context
+- prior weights
+- prior actions
+- carry-forward structure
+
+A prior report is **not** the preferred source for current prices if fresh same-day close retrieval is feasible.
+After the U.S. regular close, fresh same-day ETF pricing must be attempted before current prices are inherited from a prior report.
+
 ## Inaugural build rule
 If no prior report exists and I do not provide a portfolio, build a fresh inaugural model portfolio using:
 - Starting capital: EUR 100,000
@@ -389,10 +403,12 @@ The tracked portfolio must follow these rules:
 - Base capital: EUR 100,000
 - Holdings are tracked in native ticker currency
 - Total portfolio NAV is tracked in EUR
-- Use the market close EUR/USD snapshot for USD-to-EUR conversion
+- Use the same-day market close EUR/USD snapshot where available
+- If a same-day close snapshot is not cleanly verifiable, use the latest official reference EUR/USD rate from the Market Data + FX Valuation Protocol
 - Assume whole shares only
 - Residual unallocated capital remains as cash
 - Assume all recommendations are implemented
+- Do not let prior-report pricing become the default when fresh close retrieval is still possible
 
 ## Standardized input template
 
@@ -428,12 +444,162 @@ The tracked portfolio must follow these rules:
 
 ---
 
+# 6A. MARKET DATA + FX VALUATION PROTOCOL
+
+This section is mandatory.
+
+The purpose of this section is to make ETF closing-price retrieval and EUR valuation operationally deterministic **without creating lagging portfolio pricing**.
+
+## Primary rule
+After the U.S. regular session has ended, the default behavior is to attempt a fresh same-day valuation update.
+Carry-forward is a fallback, not the baseline.
+
+Do not block the full valuation update only because a single unified source for all holdings is unavailable.
+A complete end-of-day valuation may use per-ticker verified closes from multiple reputable sources, as long as the source used for each ticker is explicitly deterministic and the pricing timestamp is close-compatible.
+
+## Allowed pricing source hierarchy for ETF closes
+For each ETF holding, use this source priority:
+
+1. official exchange or primary market close
+2. issuer or fund provider page if it clearly shows the latest market price or NAV-relevant trading price
+3. major market data source with latest official close
+4. reputable financial media market quote page
+5. prior verified close from the latest stored report only if no fresh close can be verified
+
+## Allowed FX source hierarchy for USD-to-EUR conversion
+Use this priority for USD-to-EUR conversion:
+
+1. same-day market close EUR/USD snapshot from a reputable FX, central-bank, or market-data source
+2. latest official ECB or equivalent reference rate if same-day close is not yet reliably available
+3. prior verified EUR/USD from the latest stored report only if no fresh FX reference can be verified
+
+## Time-of-day rule
+A same-day ETF close may be used once the U.S. regular session has ended.
+Use regular-session close, not after-hours.
+Do not wait for a single perfect source if regular-session close data is already available per ticker from reputable sources.
+
+## Per-ticker valuation rule
+You must attempt to retrieve a fresh close for every held ETF separately.
+Do not require that all holdings come from one single source.
+Per-ticker verified closes are allowed.
+
+## Mandatory coverage table rule
+For every run after the U.S. regular close, you must build an internal pricing coverage table before writing the report.
+This table must contain, at minimum:
+- Ticker
+- Previous price
+- Fresh price found? Yes/No
+- Source tier used
+- FX basis used
+- Status = Fresh close / Fresh fallback source / Carried forward
+
+You do not have to print this full table in the client report unless explicitly asked, but you must use it to drive the valuation decision.
+
+## Incomplete-set rule
+If at least 75% of holdings by count OR at least 85% of invested portfolio weight has a fresh verifiable close:
+- update those holdings to the fresh close
+- carry forward only the holdings that could not be freshly verified
+- clearly state which tickers were carried forward if the user asks or if the report notes require it
+- still update total NAV and equity curve
+
+If less than that threshold is met:
+- carry forward the full prior verified portfolio valuation
+- explicitly say that the mark-to-market was not updated because the fresh close-set was too incomplete
+
+## Currency-conversion rule
+If all ETF closes are fresh but same-day EUR/USD is not cleanly available:
+- use the latest official reference EUR/USD rate from the allowed FX hierarchy
+- do not block ETF valuation solely because one exact market-close FX print is unavailable
+
+## Staleness labeling rule
+For every run, classify each holding price as one of:
+- Fresh close
+- Fresh source, non-primary fallback
+- Carried forward
+
+This labeling is internal unless explicitly requested, but it must control the valuation logic.
+
+## Deterministic valuation rule
+The valuation process must prefer a partial but explicitly labeled fresh mark-to-market over a full carry-forward, as long as the Incomplete-set rule is satisfied.
+
+## Mandatory reporting note
+If any holdings were carried forward because fresh closes were unavailable, state this briefly in:
+- Executive Summary (`What changed this week`)
+- Equity Curve and Portfolio Development (`Notes`)
+- Position Changes Executed This Run or Current Portfolio Holdings and Cash
+
+## Anti-freeze rule
+Do not leave the equity curve unchanged merely because one or two holdings or the exact same-day FX close could not be perfectly verified.
+Use the fallback hierarchy and incomplete-set rule to keep the tracked portfolio moving whenever enough of the portfolio can be marked reliably.
+
+## Anti-lag rule
+After the U.S. regular close, the system must actively prefer a fresh same-day valuation update.
+It is prohibited to skip the pricing pass just because:
+- a prior report already exists
+- one or two holdings are unresolved
+- all holdings are not available from one source
+- the reporting workflow is long
+- the delivery step has not happened yet
+
+Carry-forward may happen only after the pricing pass has actually been attempted and evaluated.
+
+---
+
+# 6B. MANDATORY PRE-ANALYSIS PRICING PASS
+
+This section is mandatory.
+
+Before any macro analysis, portfolio scoring, GitHub write, or email delivery, you must complete a fresh market-data valuation pass.
+
+## Required sequence
+1. Retrieve a fresh close for each held ETF individually.
+2. Retrieve the USD/EUR conversion basis using the FX hierarchy.
+3. Build the internal pricing coverage table for all holdings.
+4. Label each holding as:
+   - Fresh close
+   - Fresh fallback source
+   - Carried forward
+5. Compute:
+   - holdings coverage by count
+   - invested-weight coverage
+6. Apply the Incomplete-set rule immediately.
+7. Recalculate:
+   - total NAV
+   - market values
+   - weights
+   - cash %
+   - since-inception return
+8. Only after this repricing step is complete may the report-writing step begin.
+
+## Hard precedence rule
+The pricing pass comes before:
+- macro regime classification
+- geopolitical regime classification
+- position scoring
+- new opportunity generation
+- GitHub write
+- email delivery
+
+## Fail-soft rule
+If at least 75% of holdings by count OR 85% of invested weight can be freshly valued, update the portfolio immediately using the fresh prices available and carry forward only unresolved holdings.
+
+## Portfolio-wide carry-forward prohibition
+Do not carry forward the whole portfolio merely because one or two holdings are unresolved if the Incomplete-set rule is otherwise satisfied.
+
+## Freshness-first rule
+For after-close runs, the portfolio must be treated as a live tracked book.
+That means current same-day close prices have precedence over prior report prices whenever fresh retrieval is feasible.
+
+---
+
 # 7. FIXED STRUCTURAL THEME UNIVERSE
 
 Every week, scan the full monitored universe below before selecting which themes appear in the report.
 
 ## A. AI and digital infrastructure
 - AI compute infrastructure
+- semiconductors / chip designers
+- semiconductor equipment / lithography / packaging / test
 - AI data-center buildout
 - AI networking / interconnect
 - AI cooling / thermal management
@@ -448,6 +614,7 @@ Every week, scan the full monitored universe below before selecting which themes
 - battery storage and grid balancing
 - distributed power / backup power
 - industrial electrification
+- copper / electrical metals / enabling materials where investable
 
 ## C. Advanced energy and fuel systems
 - next-generation nuclear / SMRs
@@ -470,14 +637,38 @@ Every week, scan the full monitored universe below before selecting which themes
 - critical minerals / strategic materials
 - water / utility bottlenecks where linked to capex or scarcity
 
+## Discovery-breadth rule
+Before selecting the final Structural Opportunity Radar, run a broad neutral discovery sweep across the full universe above.
+This sweep is internal only and must not be printed in full unless explicitly asked.
+
+## Challenger rule
+Each weekly run must test at least 2 challenger themes that are not automatic repeat entries from the prior run.
+At least 1 challenger theme should come from outside the prior published radar if evidence supports it.
+
+## Compact-publication rule
+Keep the published Structural Opportunity Radar compact.
+- Default size: 5 rows
+- Allowed range: 5 to 8 rows
+- Only expand above 5 rows if there are clearly additional high-quality themes that would otherwise be wrongly omitted
+
+## Anti-omission rule
+If a major structural theme scores strongly on discovery but is not included in the final published radar, explicitly consider whether it should still appear as:
+- an extra radar row, if conviction is high enough, or
+- one of the 1-3 `Best structural opportunities not yet actionable`
+
 ## Rule
 Every weekly run must review the full universe above, then select only the highest-ranked themes for the published Structural Opportunity Radar.
+Do not let a narrow prior theme list or prior report inertia prevent the model from surfacing large opportunities.
 
 ---
 
-# 8. REQUIRED PROCESS SEQUENCE
+# 8. PROCESS SEQUENCE
 
 Follow this exact order every time.
+
+## STEP 0 - MANDATORY PRE-ANALYSIS PRICING PASS
+Run Section 6B in full.
+No macro analysis, portfolio scoring, or report writing may begin before this step has produced a valuation decision.
 
 ## STEP 1 - CLASSIFY THE MACRO REGIME
 Classify the current 3-12 month macro regime using:
@@ -561,6 +752,10 @@ Buckets:
 ## STEP 5 - BUILD THE STRUCTURAL OPPORTUNITY RADAR
 This section is mandatory.
 
+### Step 5A - Broad discovery sweep
+Before final selection, review the entire structural universe and the challenger themes.
+This is an internal longlist step and must not materially increase the published report length.
+
 ### Structural discovery funnel
 A theme must pass:
 1. theme existence
@@ -569,25 +764,42 @@ A theme must pass:
 4. timing
 5. portfolio relevance
 
-### Required scoring
-For every structural theme, score the following from 1 to 5:
+### Two-stage scoring
+For every structural theme, score the following from 1 to 5.
+
+#### Layer 1 - Structural Discovery Score
 - Structural Tailwind Strength
 - Evidence of Acceleration
 - Market Access Quality
 - Monetization Clarity
+
+#### Layer 2 - Implementation / Timing Score
 - Valuation / Crowding Balance
 - Macro Timing
 - Portfolio Fit
 
-### Weighted formula
+### Discovery formula
+Structural Discovery Score =
+- Structural Tailwind Strength × 0.35
+- Evidence of Acceleration × 0.30
+- Market Access Quality × 0.15
+- Monetization Clarity × 0.20
+
+### Implementation formula
+Implementation / Timing Score =
+- Valuation / Crowding Balance × 0.30
+- Macro Timing × 0.40
+- Portfolio Fit × 0.30
+
+### Combined ranking formula
 Structural Opportunity Score =
-- Structural Tailwind Strength × 0.20
-- Evidence of Acceleration × 0.20
-- Market Access Quality × 0.10
-- Monetization Clarity × 0.15
-- Valuation / Crowding Balance × 0.10
-- Macro Timing × 0.15
-- Portfolio Fit × 0.10
+- Structural Discovery Score × 0.60
+- Implementation / Timing Score × 0.40
+
+### Ranking rule
+Use the Structural Discovery Score as an anti-omission guardrail.
+A theme with a strong discovery score must not be ignored only because current timing is imperfect.
+If the combined score is not high enough for the final radar, consider it for `Best structural opportunities not yet actionable`.
 
 ### Status mapping
 Use exactly one:
@@ -607,12 +819,17 @@ Every radar item must include:
 - What needs to happen
 - Invalidation / what would weaken the case
 
-### Required output table
+### Output discipline rule
+Do not print the full discovery sweep, rejected-theme list, or full scoring matrix unless explicitly asked.
+Keep the published radar concise and decision-useful.
+
+### output table
 | Theme | Primary ETF | Alternative ETF | Why it matters | Structural fit | Macro timing | Status | What needs to happen | Time horizon |
 |---|---|---|---|---:|---:|---|---|---|
 
 ### Best structural opportunities not yet actionable
 List the top 1-3 themes that are structurally compelling but not ready.
+This section is part of the anti-omission control and should be used deliberately.
 
 ## STEP 6 - SCORE CURRENT POSITIONS
 For each current position, assign a score from 1 to 5 on each factor below:
@@ -713,6 +930,11 @@ Translate the final actions into an implemented model portfolio using these rule
 - Track holdings in native currency
 - Convert total portfolio value to EUR using the market close EUR/USD snapshot
 - Keep residual as cash
+- Apply the Market Data + FX Valuation Protocol for all ETF closes and FX conversion
+- Treat Section 6B as authoritative for valuation before narrative analysis begins
+- Do not require a single-source all-holdings close set if per-ticker verified closes are available
+- If the Incomplete-set rule is satisfied, update the portfolio using fresh closes where available and carry forward only the unresolved holdings
+- Do not inherit prior report prices as current prices if the pricing pass has produced a fresh valuation decision
 
 ## STEP 12 - BUILD THE EQUITY-CURVE SUMMARY
 This step is mandatory.
@@ -746,6 +968,11 @@ Do not let media framing override stronger market or policy evidence.
 ---
 
 # 10. REQUIRED OUTPUT STRUCTURE
+
+- In sections 10, 13, 14, 15, and 16, preserve `Ticker` as the first column header wherever tickers are shown.
+- In section 10, preserve position headers in the format `### [Ticker] — [ETF name]`.
+- In sections 4, 16, and any other ETF table, preserve the headers `Primary ETF` and `Alternative ETF` exactly where ETF tickers are shown.
+- Where a table column contains ETF tickers intended for navigation, prefer plain ticker text only in those cells.
 
 Use exactly this structure.
 
@@ -998,7 +1225,7 @@ This report is provided for informational and educational purposes only. It is n
 # 11. DUAL OUTPUT + GITHUB WRITE REQUIREMENT
 
 Present the full report in chat and also write the same report as a Markdown file to:
-- repository: `market-predictions/daily-fx`
+- repository: `market-predictions/daily-etf`
 - folder: `output/`
 
 ## Full-chat-publication rule
@@ -1067,7 +1294,7 @@ After those three steps, you must provide a short delivery receipt that explicit
 
 # 12. PRIOR REPORT LOOKUP RULE
 
-Before starting the current analysis, look in `output/` within `market-predictions/daily-fx` for the most recent available report matching:
+Before starting the current analysis, look in `output/` within `market-predictions/daily-etf` for the most recent available report matching:
 - `weekly_analysis_YYMMDD.md`
 - `weekly_analysis_YYMMDD_NN.md`
 
@@ -1118,3 +1345,16 @@ Before producing the final answer, silently verify:
 20. Did I verify that the PDF attachment was generated and attached?
 21. Did I obtain or surface a positive delivery receipt / manifest from the send step?
 22. If a prior report existed, did I avoid asking the user for manual portfolio input?
+23. Did I run the broad discovery sweep before publishing the Structural Opportunity Radar?
+24. Did I test at least 2 challenger themes?
+25. Did I avoid letting portfolio-fit or timing alone suppress a major structural theme?
+26. Did I keep the published Structural Opportunity Radar compact even after broadening the discovery process?
+27. Did I attempt per-ticker ETF close retrieval rather than requiring a single-source full close set?
+28. Did I build the internal pricing coverage table before writing the report?
+29. If some closes were missing, did I apply the Incomplete-set rule correctly?
+30. If same-day EUR/USD was unavailable, did I use the allowed FX fallback instead of freezing NAV?
+31. If the U.S. regular session had already ended, did I actively prefer a fresh same-day valuation update?
+32. If the equity curve remained unchanged, was that because the incomplete-set threshold truly failed?
+33. Did I avoid treating prior report prices as current prices when fresh repricing was feasible?
+34. Did I use carry-forward only as a narrow fallback rather than as a portfolio-wide default?
+35. Did I complete the pricing pass before macro analysis, scoring, and delivery?
