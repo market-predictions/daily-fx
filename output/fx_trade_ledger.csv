@@ -1,0 +1,8 @@
+trade_id,trade_date,source_report,currency,raw_pair,synthetic_pair,action,units_delta_ccy,execution_price_ccyusd,notional_usd,fee_usd,realized_pnl_usd,post_trade_units_ccy,post_trade_avg_entry_ccyusd,comment
+20260325-002-CHF,2026-03-25,weekly_fx_review_260325_02.md,CHF,USD/CHF,CHFUSD,rebalance,10253.49,1.26786099,13000.0,0.0,0.0,10253.49,1.26786099,Build on weakness target 13.00%
+20260325-003-JPY,2026-03-25,weekly_fx_review_260325_02.md,JPY,USD/JPY,JPYUSD,rebalance,2064687.82,0.00629635,13000.0,0.0,0.0,2064687.82,0.00629635,Hold / stage target 13.00%
+20260325-004-CAD,2026-03-25,weekly_fx_review_260325_02.md,CAD,USD/CAD,CADUSD,rebalance,13793.4,0.72498441,10000.0,0.0,0.0,13793.4,0.72498441,Hold target 10.00%
+20260325-005-MXN,2026-03-25,weekly_fx_review_260325_02.md,MXN,USD/MXN,MXNUSD,rebalance,141851.68,0.05639694,8000.0,0.0,0.0,141851.68,0.05639694,Hold / stage target 8.00%
+20260325-006-AUD,2026-03-25,weekly_fx_review_260325_02.md,AUD,AUD/USD,AUDUSD,rebalance,11481.88015788,0.69675,8000.0,0.0,0.0,11481.88015788,0.69675,Hold / stage target 8.00%
+20260325-007-GBP,2026-03-25,weekly_fx_review_260325_02.md,GBP,GBP/USD,GBPUSD,rebalance,5215.82331771,1.34207,7000.0,0.0,0.0,5215.82331771,1.34207,Reduce target 7.00%
+20260325-008-EUR,2026-03-25,weekly_fx_review_260325_02.md,EUR,EUR/USD,EURUSD,rebalance,4307.48554839,1.16077,5000.0,0.0,0.0,4307.48554839,1.16077,Reduce target 5.00%
