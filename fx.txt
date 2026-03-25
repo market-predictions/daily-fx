@@ -1,4 +1,4 @@
-# Masterprompt V1 — Weekly FX Review
+# Masterprompt V2 — Weekly FX Review
 ## READ THIS DOCUMENT COMPLETELY BEFORE YOU TAKE ACTION
 ## DO NOT SKIP SECTIONS. DO NOT STOP EARLY. DO NOT ASK FOR MANUAL PORTFOLIO INPUT IF A PRIOR REPORT EXISTS.
 
@@ -284,6 +284,7 @@ You must make explicit portfolio judgments.
 8. Risk management is portfolio-level, not position-level only.
 9. Cash is an active choice.
 10. All weekly recommendations are assumed implemented in the model portfolio.
+11. The implementation portfolio is tracked via FX pairs and USD cash, not via abstract sleeve percentages only.
 
 ---
 
@@ -291,11 +292,13 @@ You must make explicit portfolio judgments.
 
 ### Base / accounting anchor
 - The base currency is **USD**.
-- All holdings, scores, cash balances, and portfolio values must be expressed in USD unless explicitly stated otherwise.
+- All holdings, scores, cash balances, portfolio values, P&L, and NAV must be expressed in USD unless explicitly stated otherwise.
 
 ### Position object
 - The report evaluates **currencies**, not currency pairs.
-- Pairs may be used for evidence, technical confirmation, and implementation discussion, but final judgments must be at the currency level.
+- Pairs are used for evidence, technical confirmation, and implementation.
+- Final judgments must always be at the currency level.
+- Portfolio implementation must be expressed through **FX pairs plus USD cash**.
 
 ### Core universe
 - USD
@@ -314,6 +317,23 @@ You must make explicit portfolio judgments.
 ### Rule
 Do not let the report drift into a classic EURUSD / GBPUSD trading note.
 The final recommendation must always read as a currency stance first.
+
+### Standard implementation map
+Use these implementation proxies for the tracked model portfolio:
+- EUR -> `EURUSD`
+- GBP -> `GBPUSD`
+- AUD -> `AUDUSD`
+- NZD -> `NZDUSD`
+- JPY -> `USDJPY` (internally valued as synthetic `JPYUSD = 1 / USDJPY`)
+- CHF -> `USDCHF` (internally valued as synthetic `CHFUSD = 1 / USDCHF`)
+- CAD -> `USDCAD` (internally valued as synthetic `CADUSD = 1 / USDCAD`)
+- MXN -> `USDMXN` (internally valued as synthetic `MXNUSD = 1 / USDMXN`)
+- ZAR -> `USDZAR` (internally valued as synthetic `ZARUSD = 1 / USDZAR`)
+
+### Direction rule
+- Bullish non-USD currency = long synthetic `CCYUSD`
+- Bearish non-USD currency = short synthetic `CCYUSD`
+- USD bullish is primarily expressed via USD cash and/or short exposure to weak non-USD currencies
 
 ---
 
@@ -342,6 +362,18 @@ Use this fallback hierarchy:
 
 If none exist, create an inaugural model portfolio and state that clearly.
 
+### Portfolio-state files
+When available, also use these implementation files as authoritative execution / valuation support:
+- `output/fx_portfolio_state.json`
+- `output/fx_trade_ledger.csv`
+- `output/fx_valuation_history.csv`
+- `output/fx_recommendation_scorecard.csv`
+
+Priority rule:
+- valuation and open-position facts should come from the portfolio-state files when they exist
+- strategy and target-allocation intent should come from the most recent report
+- if the two differ, explain the difference briefly and deterministically
+
 ---
 
 ## 7. REQUIRED TECHNICAL OVERLAY INPUT
@@ -356,6 +388,7 @@ Primary input file:
 - Translate pair evidence into a **currency-level technical confirmation score**.
 - Do not let the technical overlay dominate the strategic judgment.
 - If macro and technical signals conflict, do not blindly follow the technical signal. Instead downgrade confidence, shift to Hold / Watch, or stage the position.
+- If the overlay is older than the report date, classify it explicitly as **prior-day** or **stale** and reduce its weight.
 
 ### Required technical pairs
 The overlay should ordinarily cover:
@@ -384,7 +417,60 @@ Ignore trade-engine details such as entries, stops, take-profit levels, or risk/
 
 ---
 
-## 8. MACRO AND POLICY ENGINE
+## 8. MARK-TO-MARKET PORTFOLIO ENGINE
+
+The model portfolio must be tracked as an **actual USD-base FX implementation portfolio**, not as a static narrative allocation table.
+
+### Authoritative implementation rule
+The portfolio engine should convert report recommendations into:
+- USD cash
+- open FX pair exposures
+- entry prices
+- current prices
+- realized P&L
+- unrealized P&L
+- total NAV
+
+### Valuation source rule
+Portfolio valuation must use a deterministic, repeatable price source:
+- latest completed daily bar from Twelve Data
+- no ad hoc intraday spot snapshots unless explicitly configured
+
+### Execution rule
+Unless explicitly overridden, assume all model-portfolio changes are executed at the same valuation close used for that run.
+
+### Position sizing rule
+For each non-USD currency sleeve:
+- determine target USD notional from target weight × NAV
+- convert the target USD notional into currency units using the synthetic `CCYUSD` entry price
+- store entry date, entry price, units, and implementation pair
+
+### Synthetic pricing rule
+For internally inverse currencies, compute:
+- `JPYUSD = 1 / USDJPY`
+- `CHFUSD = 1 / USDCHF`
+- `CADUSD = 1 / USDCAD`
+- `MXNUSD = 1 / USDMXN`
+- `ZARUSD = 1 / USDZAR`
+
+This synthetic `CCYUSD` price is the authoritative valuation price for the sleeve.
+
+### Portfolio valuation formulas
+For each sleeve:
+- `market_value_usd = units_ccy * current_price_ccyusd`
+- `unrealized_pnl_usd = units_ccy * (current_price_ccyusd - entry_price_ccyusd)`
+
+Total portfolio:
+- `NAV = cash_usd + sum(current market values of all open sleeves)`
+
+### Reporting rule
+Section 7 and Section 15 must use the engine outputs when those files exist.
+Do not flat-line the portfolio value unless no valuation files exist yet.
+If no engine output exists yet, say so explicitly and use a deterministic fallback.
+
+---
+
+## 9. MACRO AND POLICY ENGINE
 
 The strategic decision engine must be built around:
 
@@ -436,7 +522,7 @@ The same data surprise does not need to have the same currency impact in every j
 
 ---
 
-## 9. STRATEGIC SCORING MODEL
+## 10. STRATEGIC SCORING MODEL
 
 Each currency should be judged through a structured model.
 
@@ -467,7 +553,7 @@ State the logic and thresholds clearly in the report.
 
 ---
 
-## 10. STRUCTURAL CURRENCY OPPORTUNITY RADAR
+## 11. STRUCTURAL CURRENCY OPPORTUNITY RADAR
 
 The Structural Currency Opportunity Radar must track medium-term or slower-moving themes, not short-lived noise.
 
@@ -495,7 +581,7 @@ For each radar theme, classify:
 
 ---
 
-## 11. REPORT WRITING RULES
+## 12. REPORT WRITING RULES
 
 The report must:
 - stay decisive
@@ -512,6 +598,7 @@ Use explicit labels:
 - Sell
 - Watch
 - Build on weakness
+- Hold / stage
 
 ### Tone
 - institutional
@@ -530,7 +617,7 @@ When you cite technical pair evidence:
 
 ---
 
-## 12. REQUIRED OUTPUT STRUCTURE
+## 13. REQUIRED OUTPUT STRUCTURE
 
 The final report must contain **all** of the following sections in this exact order.
 
@@ -552,6 +639,19 @@ The final report must contain **all** of the following sections in this exact or
 
 ## 7. Equity curve and portfolio development
 
+### Section 7 content rule
+When valuation files exist, Section 7 must be sourced from actual portfolio valuation data, not from narrative carry-forward alone.
+It must include, at minimum:
+- valuation date
+- NAV (USD)
+- since inception return (%)
+- daily or latest period return (%) where available
+- realized P&L (USD) where available
+- unrealized P&L (USD) where available
+- a compact valuation history table
+
+If valuation files do not yet exist, say so explicitly and use a deterministic fallback.
+
 ## 8. Currency allocation map
 
 ## 9. Macro transmission & second-order effects map
@@ -564,7 +664,16 @@ The final report must contain **all** of the following sections in this exact or
 
 ## 13. Final action table
 
+### Section 13 authority rule
+Section 13 is the authoritative target-allocation table for the model portfolio at the end of the run.
+The portfolio engine is expected to translate this section into implementation weights and positions.
+
 ## 14. Position changes executed this run
+
+### Section 14 execution rule
+Section 14 must explicitly state whether changes were actually implemented in the model portfolio on this run.
+If the engine rebalanced the portfolio, state the changes.
+If no rebalance occurred, say so explicitly.
 
 ## 15. Current portfolio holdings and cash
 
@@ -576,6 +685,22 @@ Required labels inside Section 15:
 - Since inception return (%):
 - Base currency:
 
+### Section 15 content rule
+When portfolio-state files exist, Section 15 must be sourced from actual open positions and cash.
+The holdings table should, where available, include:
+- currency sleeve
+- implementation pair
+- direction
+- entry date
+- entry price
+- current price
+- gross exposure (USD)
+- unrealized P&L (USD)
+- current weight (%)
+- stance
+
+If portfolio-state files do not yet exist, use the target allocation table and state that Section 15 is a fallback representation rather than a live marked-to-market holdings table.
+
 ## 16. Carry-forward input for next run
 
 This exact sentence must appear in the markdown source:
@@ -585,7 +710,7 @@ This exact sentence must appear in the markdown source:
 
 ---
 
-## 13. OUTPUT FILE RULES
+## 14. OUTPUT FILE RULES
 
 Write the report to GitHub using:
 - `output/weekly_fx_review_YYMMDD.md`
@@ -594,9 +719,15 @@ Write the report to GitHub using:
 Use deterministic versioning.
 Do not overwrite a same-day report without an explicit reason.
 
+The portfolio engine should also maintain:
+- `output/fx_portfolio_state.json`
+- `output/fx_trade_ledger.csv`
+- `output/fx_valuation_history.csv`
+- `output/fx_recommendation_scorecard.csv`
+
 ---
 
-## 14. DELIVERY RULES
+## 15. DELIVERY RULES
 
 After producing the report:
 1. publish it in chat
@@ -610,7 +741,7 @@ Required mail recipient:
 
 ---
 
-## 15. FINAL DISCIPLINE RULES
+## 16. FINAL DISCIPLINE RULES
 
 Do not:
 - drift back into ETF framing
@@ -620,6 +751,7 @@ Do not:
 - omit the carry-forward section
 - omit the equity-curve section
 - describe the job as complete if delivery failed
+- present a flat synthetic equity curve as a real performance record when valuation files exist
 
 Do:
 - keep the ETF sister-report style and discipline
@@ -627,3 +759,4 @@ Do:
 - keep the structure stable over time
 - keep the report scannable for a client
 - use technical analysis as a disciplined overlay, not the main thesis engine
+- treat the model portfolio as an actual tracked USD-base FX pair portfolio when the engine outputs are available
