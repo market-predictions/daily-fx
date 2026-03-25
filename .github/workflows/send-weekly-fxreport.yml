@@ -71,12 +71,7 @@ jobs:
           test -f output/fx_valuation_history.csv
           test -f output/fx_recommendation_scorecard.csv
 
-          git add \
-            output/fx_technical_overlay.json \
-            output/fx_portfolio_state.json \
-            output/fx_trade_ledger.csv \
-            output/fx_valuation_history.csv \
-            output/fx_recommendation_scorecard.csv
+          git add             output/fx_technical_overlay.json             output/fx_portfolio_state.json             output/fx_trade_ledger.csv             output/fx_valuation_history.csv             output/fx_recommendation_scorecard.csv
 
           if git diff --cached --quiet; then
             echo "No portfolio artifact changes; nothing to commit."
