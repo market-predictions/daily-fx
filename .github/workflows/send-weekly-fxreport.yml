@@ -7,6 +7,7 @@ on:
       - 'fx.txt'
       - 'fx_technical_overlay.py'
       - 'fx_portfolio_engine.py'
+      - 'generate_fx_report.py'
       - 'send_fxreport.py'
       - '.github/workflows/send-weekly-fxreport.yml'
 
@@ -20,7 +21,7 @@ concurrency:
 jobs:
   send-fx-report:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -60,7 +61,11 @@ jobs:
         run: |
           python fx_portfolio_engine.py
 
-      - name: Commit generated portfolio artifacts if changed
+      - name: Generate fresh FX report markdown
+        run: |
+          python generate_fx_report.py
+
+      - name: Commit generated artifacts if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -71,14 +76,27 @@ jobs:
           test -f output/fx_valuation_history.csv
           test -f output/fx_recommendation_scorecard.csv
 
-          git add             output/fx_technical_overlay.json             output/fx_portfolio_state.json             output/fx_trade_ledger.csv             output/fx_valuation_history.csv             output/fx_recommendation_scorecard.csv
+          latest_report="$(ls -1 output/weekly_fx_review_*.md | sort | tail -n 1)"
+          test -n "$latest_report"
+
+          git add \
+            output/fx_technical_overlay.json \
+            output/fx_portfolio_state.json \
+            output/fx_trade_ledger.csv \
+            output/fx_valuation_history.csv \
+            output/fx_recommendation_scorecard.csv \
+            "$latest_report"
 
           if git diff --cached --quiet; then
-            echo "No portfolio artifact changes; nothing to commit."
+            echo "No FX artifact changes; nothing to commit."
           else
-            git commit -m "Update FX overlay and portfolio artifacts [skip ci]"
+            git commit -m "Update FX overlay, portfolio state, and fresh report [skip ci]"
             git push
           fi
+
+      - name: Validate report freshness before send
+        run: |
+          python send_fxreport.py --validate-only
 
       - name: Render and send FX report
         env:
