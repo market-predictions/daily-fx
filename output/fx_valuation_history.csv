@@ -1,2 +1,3 @@
 date,nav_usd,cash_usd,gross_exposure_usd,net_exposure_usd,realized_pnl_usd,unrealized_pnl_usd,daily_return_pct,since_inception_return_pct,drawdown_pct,overlay_as_of_utc
 2026-03-25,100000.0,36000.0,64000.0,64000.0,0.0,0.0,0.0,0.0,0.0,2026-03-25T12:08:31Z
+2026-03-25,99947.37,35981.05,63966.32,63966.32,-0.0,-52.63,-0.0,-0.0526,-0.0526,2026-03-25T12:21:52Z
