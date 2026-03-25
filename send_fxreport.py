@@ -478,7 +478,8 @@ def simple_markdown_to_html(md: str) -> str:
             if not in_ol:
                 parts.append("<ol>")
                 in_ol = True
-            parts.append(f"<li>{inline_format(re.sub(r'^\d+\.\s+', '', stripped))}</li>")
+            ordered_item = re.sub(r'^\d+\.\s+', '', stripped)
+            parts.append(f"<li>{inline_format(ordered_item)}</li>")
         elif stripped.startswith("> "):
             close_lists()
             parts.append(f"<blockquote>{inline_format(stripped[2:])}</blockquote>")
