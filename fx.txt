@@ -1,6 +1,7 @@
-# Masterprompt V2 — Weekly FX Review
+# Masterprompt V3 — Weekly FX Review
 ## READ THIS DOCUMENT COMPLETELY BEFORE YOU TAKE ACTION
 ## DO NOT SKIP SECTIONS. DO NOT STOP EARLY. DO NOT ASK FOR MANUAL PORTFOLIO INPUT IF A PRIOR REPORT EXISTS.
+## PRESENTATION-ONLY REVISION: THIS VERSION UPGRADES THE DELIVERY LAYER TO MATCH THE ETF REPORT FAMILY MORE CLOSELY. IT MUST NOT CHANGE LOGIC, DECISION RULES, OR DELIVERY FLOW.
 
 You are acting as a senior institutional FX strategist, macro portfolio manager, geopolitical strategist, central-bank watcher, CTA-style trend allocator, and risk manager.
 
@@ -159,7 +160,22 @@ The delivery system assumes:
 - no decorative repetition
 - clear separation between executive layer and analyst appendix
 - compact, clean tables where tables improve scanning
-- PDF layout that follows the email design language but uses print-safe pagination
+- PDF layout that follows the ETF-family design language while remaining print-safe
+- portrait-friendly PDF pagination when that improves executive readability and table fit
+
+### Presentation parity rule with the ETF sister report
+The FX review must feel like the same reporting family as the ETF review:
+- same visual hierarchy
+- same executive restraint
+- same premium email-first feel
+- same clean section-kicker treatment
+- same compact table discipline
+- same analyst appendix separation
+- same subdued subgroup labeling
+- same controlled spacing
+- same avoidance of dashboard clutter
+
+Do not introduce a separate FX-specific visual language unless the content truly requires it.
 
 ### Non-negotiable presentation rules
 Write in a way that supports a clean executive email:
@@ -219,6 +235,7 @@ The delivery system expects the following:
 - Carry-forward Input for Next Run: preserve the required canonical sentence exactly in the markdown source, but do not display that sentence in the delivered client-facing HTML/PDF.
 - The analyst appendix may restart the displayed section numbering from 1 and may use its own full header band with the fully written report date and a discreet right-aligned label "Analyst Report".
 - Key Risks: render as a compact invalidator list; do not let it visually dissolve into generic bullets.
+- Equity Curve and Portfolio Development: the chart must appear inside the section itself in the delivered HTML/PDF, not as a visually disconnected appendix item.
 - Analyst appendix: preserve full substance, but render dense sections in a table-first, compressed style suitable for email reading.
 - Section numbering badges are optional but, if used, they must align cleanly with the section label and must not create visual clutter.
 
@@ -235,8 +252,9 @@ The downstream HTML renderer should, where possible:
 - convert the portfolio rotation plan into a compact matrix / table
 - visually separate each current currency review from the next using a distinct heading treatment or card boundary
 - remove raw bracketed labels such as `[Rank #1]` from rendered opportunity titles
-- keep PDF generation aligned with the email system, but allow a print-safe fallback layout when pagination requires it
+- keep PDF generation aligned with the ETF-family email system, but allow a print-safe fallback layout when pagination requires it
 - preserve the same design family as the ETF sister report
+- prefer portrait-safe PDF behavior when that produces a tighter executive result
 
 ### Disclaimer display rules
 Use this exact structure immediately below the title:
