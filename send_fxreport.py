@@ -439,8 +439,8 @@ def simple_markdown_to_html(md: str) -> str:
             if not in_ol:
                 parts.append("<ol>")
                 in_ol = True
-            cleaned = re.sub(r'^\d+\.\s+', '', stripped)
-            parts.append(f"<li>{inline_format(cleaned)}</li>")
+            cleaned_stripped = re.sub(r"^\d+\.\s+", "", stripped)
+            parts.append(f"<li>{inline_format(cleaned_stripped)}</li>")
         elif stripped.startswith("> "):
             close_lists()
             parts.append(f"<blockquote>{inline_format(stripped[2:])}</blockquote>")
@@ -551,9 +551,15 @@ def render_action_snapshot(section: dict[str, object]) -> str:
     )
     extras = ""
     if extra_blocks:
-        extras = "<div class='subblock'><div class='subblock-title'>Additional actions</div><ol>" + "".join(
-            f"<li>{inline_format(re.sub(r'^\\d+\\.\\s+', '', item))}</li>" for item in extra_blocks
-        ) + "</ol></div>"
+        extra_items_html = []
+        for item in extra_blocks:
+            cleaned_item = re.sub(r"^\d+\.\s+", "", item)
+            extra_items_html.append(f"<li>{inline_format(cleaned_item)}</li>")
+        extras = (
+            "<div class='subblock'><div class='subblock-title'>Additional actions</div><ol>"
+            + "".join(extra_items_html)
+            + "</ol></div>"
+        )
     return (
         f"<div class='panel panel-snapshot'>{render_kicker(int(section['display_number']), str(section['title']))}"
         "<table class='snapshot-table'><thead><tr><th>Recommendation</th><th>Decision</th></tr></thead>"
