@@ -1063,6 +1063,13 @@ def build_report_html(md_text: str, report_date_str: str, output_dir: Path, rend
       color: #315F8B;
       text-decoration: underline;
     }}
+    a.tv-link, a.tv-link:visited {{
+      font-weight: 400;
+    }}
+    strong a.tv-link, strong a.tv-link:visited,
+    b a.tv-link, b a.tv-link:visited {{
+      font-weight: 400;
+    }}
     """
     email_css = """
     @media screen and (max-width: 980px) {
