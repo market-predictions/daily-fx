@@ -4,8 +4,8 @@
 2026-03-28
 
 ## What this repository currently is
-This repository is already a production-style weekly FX review system with:
 
+This repository is already a production-style weekly FX review system with:
 - a strong FX masterprompt in `fx.txt`
 - a delivery/rendering script in `send_fxreport.py`
 - a GitHub Actions workflow for execution and email delivery
@@ -13,6 +13,7 @@ This repository is already a production-style weekly FX review system with:
 - a technical overlay file and a mark-to-market portfolio engine concept embedded in the prompt
 
 ## Current strengths
+
 - Strong determinism and anti-drift framing.
 - Clear client-grade presentation contract.
 - Explicit state-file awareness already exists.
@@ -21,6 +22,7 @@ This repository is already a production-style weekly FX review system with:
 - Strong fail-loud delivery discipline.
 
 ## Current weaknesses
+
 ### 1. Prompt monolith still exists
 Even though FX is more mature than ETF on explicit state, the prompt still mixes:
 - strategy logic
@@ -44,10 +46,11 @@ FX already has more explicit state files than ETF, but that only helps if future
 The repo side can now be structured, but the actual recurring ChatGPT workspace is not created automatically by the repository.
 
 ## Target architecture
+
 ### ChatGPT side
 - One dedicated ChatGPT Project called **FX Review OS**.
 - Project instructions that reinforce the operating model.
-- Minimal high-value files uploaded to the project for recurring work.
+- Minimal stable bootstrap context in the ChatGPT Project, with GitHub as the live source of truth for changing prompt, script, workflow, output, and state files.
 
 ### GitHub side
 - GitHub remains the source of truth for prompt, scripts, workflows, outputs, and control docs.
@@ -59,6 +62,7 @@ The repo side can now be structured, but the actual recurring ChatGPT workspace 
 - The prompt keeps decision standards and output requirements, but should gradually stop being the only runbook.
 
 ## Immediate priorities
+
 ### Priority A — stabilize the operating layer
 Completed in this step:
 - create a control layer in GitHub
@@ -71,7 +75,8 @@ Completed in this step:
 Still required:
 - create the ChatGPT Project in the UI
 - paste project instructions
-- upload the small set of canonical files you want always available inside the project
+- upload `control/PROJECT_BOOTSTRAP.md` as the default stable project context
+- rely on live GitHub reads for changing repo files unless a specific task requires an additional upload
 
 ### Priority C — make the FX layer boundaries more explicit
 Planned next:
@@ -85,18 +90,20 @@ Planned after project setup:
 - tighten stale-data handling where needed
 
 ## Recommended session start sequence
-For any future FX architecture session:
 
+For any future FX architecture session:
 1. read `control/SYSTEM_INDEX.md`
 2. read this file
 3. read `control/NEXT_ACTIONS.md`
 4. only then open the specific execution file relevant to the task
 
 ## Current role split
+
 ### Manual by user
 - create the ChatGPT Project
 - paste project instructions
-- upload selected project files
+- upload `control/PROJECT_BOOTSTRAP.md` as the default project context
+- optionally add temporary task-specific files only when needed
 - optionally create the helper Custom GPT in the GPT builder
 
 ### Can be done by assistant
@@ -109,4 +116,5 @@ For any future FX architecture session:
 - strengthen state authority rules
 
 ## Current status label
-**Architecture transition in progress — repo state model already relatively mature, GitHub control layer initialized, ChatGPT Project layer still manual/pending.**
+
+**Architecture transition in progress — repo state model already relatively mature, GitHub control layer initialized, lean bootstrap-first ChatGPT Project model defined, manual project setup still pending.**
