@@ -1,4 +1,4 @@
-# FX Deep Research Runtime — ChatGPT-First Production Flow
+# FX Deep Research Runtime V2 — ChatGPT-First Production Flow
 
 This file is the dedicated **ChatGPT deep research runtime** for the Weekly FX Review.
 
@@ -6,8 +6,9 @@ Its purpose is to restore the intended production flow:
 
 1. ChatGPT performs a fresh deep-research run
 2. ChatGPT generates the full Weekly FX Review in markdown
-3. ChatGPT writes that markdown file to GitHub in `output_split_test/`
-4. GitHub Actions automatically picks up the new markdown file and completes promote/render/email delivery
+3. ChatGPT proceeds directly to the GitHub write step for `output_split_test/`
+4. If GitHub confirmation is required, the confirmation prompt is shown immediately
+5. GitHub Actions automatically picks up the new markdown file and completes promote/render/email delivery
 
 This file is for the **research + report-generation stage**.
 It is **not** the delivery workflow.
@@ -187,9 +188,9 @@ Use the same naming/version discipline as the FX production report family.
 
 Once the markdown report is complete:
 
-1. present the report in chat if requested or useful for validation
-2. ask for permission before writing the markdown file to GitHub if the environment requires confirmation
-3. write the markdown file into `output_split_test/`
+1. proceed directly to the GitHub write step for `output_split_test/`
+2. if confirmation is required before the write action, show the GitHub confirmation prompt immediately
+3. once confirmation is given, write the markdown file into `output_split_test/`
 4. do **not** manually promote it into `output/` from this runtime
 5. do **not** claim email delivery succeeded from this runtime alone
 
@@ -199,6 +200,23 @@ The downstream GitHub workflow is responsible for:
 - rendering HTML/PDF
 - sending the email
 - producing the delivery receipt / manifest
+
+---
+
+## GitHub confirmation rule
+
+If GitHub write permission is required in the current environment:
+- show the GitHub permission / confirmation prompt immediately after the report is generated
+- do **not** insert an extra conversational confirmation step first
+- do **not** wait for a separate reminder to write the file
+- treat the report as incomplete until the write step has either succeeded or been blocked by missing permission
+
+The intended behavior is:
+1. deep research completes
+2. markdown is ready
+3. GitHub confirmation prompt appears immediately if needed
+4. markdown is written to `output_split_test/`
+5. GitHub Actions handles the rest
 
 ---
 
@@ -237,4 +255,4 @@ The report must read like a professional Weekly FX Review, not like a workflow n
 
 ## Canonical one-line mission
 
-**Do a fresh ChatGPT deep-research run, generate the full Weekly FX Review markdown under the split architecture, write it to `output_split_test/weekly_fx_review_YYMMDD.md`, and leave delivery to the GitHub workflow.**
+**Do a fresh ChatGPT deep-research run, generate the full Weekly FX Review markdown under the split architecture, proceed directly to the GitHub write step for `output_split_test/weekly_fx_review_YYMMDD.md`, show the GitHub confirmation prompt immediately if required, and leave delivery to the GitHub workflow.**
