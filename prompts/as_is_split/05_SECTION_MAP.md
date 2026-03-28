@@ -1,0 +1,37 @@
+# FX As-Is Split — Section Map
+
+## Original source
+- `fx.txt`
+
+## Mapping
+### `04_OPERATIONAL_RUNBOOK.md`
+- document title and opening operating notes
+- Section 0. PRE-FLIGHT EXECUTION RULE
+- Section 14. OUTPUT FILE RULES
+- Section 15. DELIVERY RULES
+- Section 16. FINAL DISCIPLINE RULES
+
+### `03_OUTPUT_CONTRACT.md`
+- Section 2. CLIENT-GRADE PRESENTATION STANDARD
+- Section 2A. VISUAL DELIVERY CONTRACT FOR HTML + PDF
+- Section 2B. TRADINGVIEW LINK CONTRACT
+- Section 12. REPORT WRITING RULES
+- Section 13. REQUIRED OUTPUT STRUCTURE
+
+### `02_INPUT_STATE_CONTRACT.md`
+- Section 5. BASE CURRENCY, UNIVERSE, AND POSITION OBJECT
+- Section 6. INPUT RESOLUTION + STANDARDIZED INPUT TEMPLATE
+- Section 7. REQUIRED TECHNICAL OVERLAY INPUT
+- Section 8. MARK-TO-MARKET PORTFOLIO ENGINE
+
+### `01_DECISION_FRAMEWORK.md`
+- Section 1. PRIMARY OPERATING PRINCIPLE
+- Section 3. ROLE AND MANDATE
+- Section 4. PORTFOLIO PHILOSOPHY
+- Section 9. MACRO AND POLICY ENGINE
+- Section 10. STRATEGIC SCORING MODEL
+- Section 11. STRUCTURAL CURRENCY OPPORTUNITY RADAR
+
+## Rule
+This mapping is organizational only.
+It does not change the existing logic, thresholds, workflow, or presentation contract.
