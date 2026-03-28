@@ -1,12 +1,20 @@
 name: Send weekly FX split-test report
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'output_split_test/weekly_fx_review_*.md'
   workflow_dispatch:
     inputs:
       split_report_name:
         description: "Optional specific split report filename from output_split_test/"
         required: false
         default: ""
+
+permissions:
+  contents: write
 
 jobs:
   promote-and-send-fx-split-report:
@@ -15,6 +23,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -39,12 +49,32 @@ jobs:
           python -m pip install --upgrade pip
           pip install matplotlib markdown weasyprint
 
-      - name: Promote split report into delivery path
+      - name: Resolve split report name
+        id: resolve_report
+        shell: bash
         run: |
           if [ -n "${{ github.event.inputs.split_report_name }}" ]; then
-            python scripts/promote_split_report.py --source-name "${{ github.event.inputs.split_report_name }}"
+            echo "split_report_name=${{ github.event.inputs.split_report_name }}" >> "$GITHUB_OUTPUT"
           else
-            python scripts/promote_split_report.py
+            latest="$(ls -1 output_split_test/weekly_fx_review_*.md | sort | tail -n 1 | xargs -n 1 basename)"
+            echo "split_report_name=$latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Promote split report into delivery path
+        run: |
+          python scripts/promote_split_report.py --source-name "${{ steps.resolve_report.outputs.split_report_name }}"
+
+      - name: Commit promoted production report
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/weekly_fx_review_*.md
+          if git diff --cached --quiet; then
+            echo "No promoted production report changes to commit"
+          else
+            git commit -m "Promote split FX report for delivery"
+            git push
           fi
 
       - name: Validate HTML/PDF render before send
@@ -52,6 +82,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import send_fxreport as sr
+
           output_dir = Path("output")
           latest = sr.latest_report_file(output_dir)
           sr.generate_delivery_assets(output_dir, latest)
