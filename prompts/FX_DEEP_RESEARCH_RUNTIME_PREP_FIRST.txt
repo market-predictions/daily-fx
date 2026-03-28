@@ -1,0 +1,217 @@
+# FX Deep Research Runtime — Prep-First ChatGPT Production Flow
+
+This file is the dedicated **prep-first ChatGPT runtime** for the Weekly FX Review.
+
+Use this file when you want the canonical ChatGPT-first production path with an explicit mandatory state refresh before research begins.
+
+---
+
+## Core operating rule
+
+This runtime must **not** start immediately with deep research.
+
+Before doing any research or writing any report, you must treat the technical/state refresh as a mandatory prerequisite.
+
+The required sequence is:
+
+1. confirm that `.github/workflows/refresh-fx-state.yml` has been run successfully
+2. confirm that the refreshed state commit landed on `main`
+3. only then begin the deep-research run
+4. generate the Weekly FX Review in markdown
+5. write the markdown file to `output_split_test/weekly_fx_review_YYMMDD.md`
+6. leave promote / render / email to the downstream GitHub workflow
+
+If the prep step was not run first, the ChatGPT run should be treated as blocked by stale state.
+
+---
+
+## Mandatory runbook
+
+Read this file together with:
+- `control/CHATGPT_PREP_FIRST_RUNBOOK.md`
+
+That runbook is authoritative for the operational sequence.
+This runtime is authoritative for the ChatGPT research + markdown generation stage after prep has completed.
+
+---
+
+## Mandatory read order
+
+Before doing any research or writing any report, read these files in this exact order:
+
+1. `control/SYSTEM_INDEX.md`
+2. `control/CURRENT_STATE.md`
+3. `control/NEXT_ACTIONS.md`
+4. `control/CHATGPT_PREP_FIRST_RUNBOOK.md`
+5. `prompts/as_is_split/FX_RUNTIME_SPLIT.txt`
+
+Then read the four active split prompt contracts in this exact order:
+
+6. `prompts/as_is_split/04_OPERATIONAL_RUNBOOK.md`
+7. `prompts/as_is_split/02_INPUT_STATE_CONTRACT.md`
+8. `prompts/as_is_split/01_DECISION_FRAMEWORK.md`
+9. `prompts/as_is_split/03_OUTPUT_CONTRACT.md`
+
+Treat those four split files as the active prompt contract for report generation.
+Treat `prompts/as_is_split/05_SECTION_MAP.md` only as a reference, not as runtime authority.
+
+---
+
+## Prep-state authority rule
+
+Do not start the report if the state refresh was skipped.
+
+For this prep-first runtime, the refreshed repo state is a required input, not an optional enhancement.
+
+Use repo state files as authoritative for implementation facts, including:
+- `output/fx_portfolio_state.json`
+- `output/fx_trade_ledger.csv`
+- `output/fx_valuation_history.csv`
+- `output/fx_recommendation_scorecard.csv`
+- `output/fx_technical_overlay.json`
+
+If strategy text and state files differ:
+- treat implementation facts as authoritative for holdings / valuations / executed trades
+- treat the latest report in `output/` as authoritative for the prior strategic narrative
+- explain the difference briefly and deterministically where necessary
+
+---
+
+## Research objective
+
+After the prep step has completed and the required files have been read, produce a **full Weekly FX Review** that preserves the existing:
+- methodology
+- research logic
+- policy-divergence logic
+- state-authority rules
+- technical-overlay role
+- portfolio-engine expectations
+- report structure
+- executive look and feel
+- delivery readiness
+
+The report must feel like the same premium family as the existing FX / ETF output standard.
+
+---
+
+## Fresh research requirement
+
+Once prep is complete, begin a **fresh deep-research pass**.
+
+At minimum, refresh:
+
+### A. Global macro regime
+- growth backdrop
+- inflation backdrop
+- labor-market direction where relevant
+- risk-on / risk-off regime
+- energy / commodity backdrop
+- trade-policy backdrop
+- major market stressors and second-order effects
+
+### B. Central banks and policy divergence
+Refresh the current stance / latest relevant decision / reaction-function framing for:
+- Fed
+- ECB
+- BoE
+- BoJ
+- SNB
+- BoC
+- RBA
+- RBNZ
+- Banxico when MXN is in scope
+
+### C. Geopolitics and event risk
+Refresh the active geopolitical and event-risk layer relevant to FX allocation, including:
+- war / conflict escalation or de-escalation
+- energy-shock implications
+- sanctions / tariff / trade-policy developments
+- other cross-border macro stressors that matter for FX regime selection
+
+### D. Current market-validating facts
+Refresh only the facts needed to support strategic judgment.
+Do not turn the report into a random news digest.
+Research must serve portfolio judgment.
+
+---
+
+## Non-change rule
+
+Do **not** use this runtime as an excuse to redesign the methodology.
+
+Do not change:
+- the scoring logic unless explicitly instructed
+- the portfolio philosophy
+- the report section order
+- the state-authority hierarchy
+- the role of the technical overlay as confirmation rather than primary engine
+- the premium executive report style
+
+This runtime changes the operating discipline, not the substantive method.
+
+---
+
+## Report-generation task
+
+After prep, reading, and research:
+
+1. generate the complete report in markdown
+2. make it comply with the split output contract
+3. preserve all required sections in the required order
+4. make sure the report is delivery-ready
+5. ensure Section 7, Section 14, and Section 15 reflect authoritative refreshed repo state where applicable
+6. label stale inputs clearly if any state or overlay artifact is still stale despite the prep step
+
+---
+
+## Required output file path
+
+The markdown report must be written to:
+- `output_split_test/weekly_fx_review_YYMMDD.md`
+
+If that exact filename already exists for the day, use:
+- `output_split_test/weekly_fx_review_YYMMDD_NN.md`
+
+Use the same naming/version discipline as the FX production report family.
+
+---
+
+## Write-to-GitHub rule
+
+Once the markdown report is complete:
+
+1. proceed directly to the GitHub write step for `output_split_test/`
+2. if confirmation is required before the write action, show the GitHub confirmation prompt immediately
+3. once confirmation is given, write the markdown file into `output_split_test/`
+4. do **not** manually promote it into `output/` from this runtime
+5. do **not** claim email delivery succeeded from this runtime alone
+
+The downstream GitHub workflow is responsible for:
+- detecting the new markdown file
+- promoting the file into `output/`
+- rendering HTML/PDF
+- sending the email
+- producing the delivery receipt / manifest
+
+---
+
+## Delivery boundary rule
+
+This runtime ends at:
+- prep completed
+- fresh research completed
+- report generated
+- markdown written to GitHub in `output_split_test/`
+
+This runtime does **not** end at:
+- email sent
+- delivery confirmed
+- manifest confirmed
+
+Only the delivery workflow may claim email delivery success.
+
+---
+
+## Canonical one-line mission
+
+**Run the mandatory FX state refresh first, then do a fresh ChatGPT deep-research run, generate the full Weekly FX Review markdown under the split architecture, write it to `output_split_test/weekly_fx_review_YYMMDD.md`, and leave delivery to the GitHub workflow.**
