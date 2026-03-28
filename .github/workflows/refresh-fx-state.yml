@@ -1,0 +1,57 @@
+name: Refresh FX technical state
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-fx-state:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Refresh technical overlay and downstream state
+        env:
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          TWELVEDATA_CALLS_PER_MINUTE: "8"
+          TWELVEDATA_RATE_LIMIT_WINDOW_SECONDS: "60"
+          TWELVEDATA_RATE_LIMIT_BUFFER_SECONDS: "1.0"
+          TWELVEDATA_MAX_RETRIES: "5"
+          TWELVEDATA_HTTP_TIMEOUT_SECONDS: "30"
+        run: python fx_refresh_all_state.py
+
+      - name: Commit refreshed state files
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            output/fx_technical_overlay.json \
+            output/fx_portfolio_state.json \
+            output/fx_valuation_history.csv \
+            output/fx_recommendation_scorecard.csv \
+            output/fx_state_refresh_manifest.json
+          if git diff --cached --quiet; then
+            echo "No refreshed state changes to commit"
+          else
+            git commit -m "Refresh FX technical overlay and state"
+            git push
+          fi
