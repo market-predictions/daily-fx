@@ -1,0 +1,89 @@
+name: Run and send weekly FX report
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_date:
+        description: "Optional report date YYYY-MM-DD in Europe/Amsterdam timezone"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  generate-promote-send-fx-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system packages for PDF rendering
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcairo2 \
+            libpango-1.0-0 \
+            libgdk-pixbuf-2.0-0 \
+            libffi-dev \
+            shared-mime-info \
+            fonts-liberation \
+            fonts-dejavu-core \
+            fonts-lato
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install matplotlib markdown weasyprint
+
+      - name: Generate automated split report
+        run: |
+          if [ -n "${{ github.event.inputs.run_date }}" ]; then
+            python scripts/generate_weekly_fx_split_report.py --run-date "${{ github.event.inputs.run_date }}"
+          else
+            python scripts/generate_weekly_fx_split_report.py
+          fi
+
+      - name: Promote split report into delivery path
+        run: python scripts/promote_split_report.py
+
+      - name: Commit generated markdown reports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output_split_test/weekly_fx_review_*.md output/weekly_fx_review_*.md
+          if git diff --cached --quiet; then
+            echo "No report changes to commit"
+          else
+            git commit -m "Generate weekly FX report"
+            git push
+          fi
+
+      - name: Validate HTML/PDF render before send
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import send_fxreport as sr
+          output_dir = Path("output")
+          latest = sr.latest_report_file(output_dir)
+          sr.generate_delivery_assets(output_dir, latest)
+          print(f"RENDER_OK | report={latest.name}")
+          PY
+
+      - name: Send email
+        env:
+          MRKT_RPRTS_SMTP_HOST: ${{ secrets.MRKT_RPRTS_SMTP_HOST }}
+          MRKT_RPRTS_SMTP_PORT: ${{ secrets.MRKT_RPRTS_SMTP_PORT }}
+          MRKT_RPRTS_SMTP_USER: ${{ secrets.MRKT_RPRTS_SMTP_USER }}
+          MRKT_RPRTS_SMTP_PASS: ${{ secrets.MRKT_RPRTS_SMTP_PASS }}
+          MRKT_RPRTS_MAIL_FROM: ${{ secrets.MRKT_RPRTS_MAIL_FROM }}
+          MRKT_RPRTS_MAIL_TO: ${{ secrets.MRKT_RPRTS_MAIL_TO }}
+        run: python send_fxreport.py
