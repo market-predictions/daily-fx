@@ -14,7 +14,7 @@ This start file defines a pragmatic two-stage flow:
 On the initial ChatGPT command:
 1. write a prep trigger file into `control/run_queue/`
 2. that GitHub write triggers `.github/workflows/prep-from-trigger.yml`
-3. schedule a delayed follow-up ChatGPT run about 10 minutes later
+3. schedule a delayed follow-up ChatGPT run about 5 minutes later
 
 ### Stage 2 — delayed
 On the delayed follow-up run:
@@ -61,7 +61,7 @@ This file defines the **one-command user experience**, not a perfect event-drive
 
 It is intentionally a **time-based approximation**:
 - GitHub prep is started via the trigger-file write
-- the report run resumes about 10 minutes later
+- the report run resumes about 5 minutes later
 - freshness is checked before report generation
 
 That means the system is acceptable only because the delayed run blocks on stale prep instead of proceeding blindly.
@@ -70,4 +70,4 @@ That means the system is acceptable only because the delayed run blocks on stale
 
 ## Canonical one-line mission
 
-**Use this file as the single user-facing ChatGPT start prompt: write a prep trigger file to `control/run_queue/`, start the prep workflow indirectly through GitHub, and then use a delayed follow-up run about 10 minutes later that checks prep freshness before generating the report.**
+**Use this file as the single user-facing ChatGPT start prompt: write a prep trigger file to `control/run_queue/`, start the prep workflow indirectly through GitHub, and then use a delayed follow-up run about 5 minutes later that checks prep freshness before generating the report.**
