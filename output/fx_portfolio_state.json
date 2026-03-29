@@ -5,15 +5,15 @@
   "valuation_source": "Twelve Data latest completed daily bars / overlay reuse",
   "inception_date": "2026-03-25",
   "starting_capital_usd": 100000.0,
-  "cash_usd": 35756.0,
-  "realized_pnl_usd": -1.15,
-  "nav_usd": 99324.7,
+  "cash_usd": 35768.13879191375,
+  "realized_pnl_usd": -1.4236522733953256,
+  "nav_usd": 99352.48,
   "peak_nav_usd": 100000.0,
   "max_drawdown_pct": -0.7424,
   "positions": [
     {
-      "units_ccy": 10281.116626547002,
-      "avg_entry_price_ccyusd": 1.2678013429438408,
+      "units_ccy": 10282.184997175,
+      "avg_entry_price_ccyusd": 1.2678001312074865,
       "opened_date": "2026-03-25",
       "last_rebalanced_date": "2026-03-29",
       "currency": "CHF",
@@ -22,13 +22,13 @@
       "target_weight_pct": 13.0,
       "action_label": "Build on weakness",
       "confidence": "Medium",
-      "current_price_ccyusd": 1.25624984,
-      "market_value_usd": 12915.65,
-      "unrealized_pnl_usd": -118.76,
-      "current_weight_pct": 13.0
+      "current_price_ccyusd": 1.25613938,
+      "market_value_usd": 12915.86,
+      "unrealized_pnl_usd": -119.9,
+      "current_weight_pct": 26.53
     },
     {
-      "units_ccy": 2066328.0695332212,
+      "units_ccy": 2064679.3830572,
       "avg_entry_price_ccyusd": 0.006296227953963886,
       "opened_date": "2026-03-25",
       "last_rebalanced_date": "2026-03-29",
@@ -38,14 +38,14 @@
       "target_weight_pct": 13.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.00624845,
-      "market_value_usd": 12911.35,
-      "unrealized_pnl_usd": -98.72,
-      "current_weight_pct": 13.0
+      "current_price_ccyusd": 0.00625562,
+      "market_value_usd": 12915.86,
+      "unrealized_pnl_usd": -83.83,
+      "current_weight_pct": 20.97
     },
     {
-      "units_ccy": 13790.975114380004,
-      "avg_entry_price_ccyusd": 0.7249771575625965,
+      "units_ccy": 13793.24163525,
+      "avg_entry_price_ccyusd": 0.7249763890431791,
       "opened_date": "2026-03-25",
       "last_rebalanced_date": "2026-03-29",
       "currency": "CAD",
@@ -54,13 +54,13 @@
       "target_weight_pct": 10.0,
       "action_label": "Hold",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.72017054,
-      "market_value_usd": 9931.85,
-      "unrealized_pnl_usd": -66.29,
-      "current_weight_pct": 10.0
+      "current_price_ccyusd": 0.72030022,
+      "market_value_usd": 9935.28,
+      "unrealized_pnl_usd": -64.5,
+      "current_weight_pct": 13.89
     },
     {
-      "units_ccy": 144099.927866032,
+      "units_ccy": 144052.34704700002,
       "avg_entry_price_ccyusd": 0.05638130414185534,
       "opened_date": "2026-03-25",
       "last_rebalanced_date": "2026-03-29",
@@ -70,14 +70,14 @@
       "target_weight_pct": 8.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.05514065,
-      "market_value_usd": 7945.76,
-      "unrealized_pnl_usd": -178.78,
-      "current_weight_pct": 8.0
+      "current_price_ccyusd": 0.05517591,
+      "market_value_usd": 7948.22,
+      "unrealized_pnl_usd": -173.64,
+      "current_weight_pct": 10.0
     },
     {
-      "units_ccy": 11552.69581400759,
-      "avg_entry_price_ccyusd": 0.6966990954391592,
+      "units_ccy": 11552.9811913137,
+      "avg_entry_price_ccyusd": 0.696698880063411,
       "opened_date": "2026-03-25",
       "last_rebalanced_date": "2026-03-29",
       "currency": "AUD",
@@ -86,13 +86,13 @@
       "target_weight_pct": 8.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.68777,
-      "market_value_usd": 7945.6,
-      "unrealized_pnl_usd": -103.16,
-      "current_weight_pct": 8.0
+      "current_price_ccyusd": 0.68798,
+      "market_value_usd": 7948.22,
+      "unrealized_pnl_usd": -100.73,
+      "current_weight_pct": 9.09
     },
     {
-      "units_ccy": 5237.132321923587,
+      "units_ccy": 5222.769804972929,
       "avg_entry_price_ccyusd": 1.3420089671707727,
       "opened_date": "2026-03-25",
       "last_rebalanced_date": "2026-03-29",
@@ -102,14 +102,14 @@
       "target_weight_pct": 7.0,
       "action_label": "Reduce",
       "confidence": "Medium",
-      "current_price_ccyusd": 1.32753,
-      "market_value_usd": 6952.45,
-      "unrealized_pnl_usd": -75.83,
-      "current_weight_pct": 7.0
+      "current_price_ccyusd": 1.33161,
+      "market_value_usd": 6954.69,
+      "unrealized_pnl_usd": -54.31,
+      "current_weight_pct": 7.37
     },
     {
-      "units_ccy": 4306.38891056826,
-      "avg_entry_price_ccyusd": 1.1607513014194308,
+      "units_ccy": 4320.962284501506,
+      "avg_entry_price_ccyusd": 1.1607138936217347,
       "opened_date": "2026-03-25",
       "last_rebalanced_date": "2026-03-29",
       "currency": "EUR",
@@ -118,25 +118,25 @@
       "target_weight_pct": 5.0,
       "action_label": "Reduce",
       "confidence": "Medium-High",
-      "current_price_ccyusd": 1.15318,
-      "market_value_usd": 4966.04,
-      "unrealized_pnl_usd": -32.6,
+      "current_price_ccyusd": 1.14966,
+      "market_value_usd": 4967.64,
+      "unrealized_pnl_usd": -47.76,
       "current_weight_pct": 5.0
     }
   ],
   "last_rebalance": {
     "date": "2026-03-29",
-    "source_report": "weekly_fx_review_260329_02.md",
+    "source_report": "weekly_fx_review_260329_03.md",
     "trades_executed": 7
   },
   "last_valuation": {
     "date": "2026-03-29",
-    "nav_usd": 99324.7,
-    "gross_exposure_usd": 63568.7,
-    "net_exposure_usd": 63568.7,
-    "unrealized_pnl_usd": -674.14,
-    "since_inception_return_pct": -0.6753,
-    "daily_return_pct": 0.0051,
-    "overlay_as_of_utc": "2026-03-29T13:01:01Z"
+    "nav_usd": 99352.48,
+    "gross_exposure_usd": 63585.76,
+    "net_exposure_usd": 63585.76,
+    "unrealized_pnl_usd": -644.68,
+    "since_inception_return_pct": -0.6475,
+    "daily_return_pct": -0.0003,
+    "overlay_as_of_utc": "2026-03-29T14:24:37Z"
   }
 }
