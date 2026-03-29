@@ -1,27 +1,25 @@
+
 #!/usr/bin/env python3
 """
 send_fxreport.py
 
-Self-contained FX delivery/rendering script.
+Executive-grade FX delivery/rendering script.
 
-Responsibilities:
-- discover latest Weekly FX Review markdown in output/
-- validate minimum report structure and freshness against live state files
-- render premium HTML email + PDF
-- keep links underlined but not bold
-- embed the equity chart in email as CID inline image
-- send HTML body + PDF/HTML/MD attachments
-- write a delivery manifest
-
-This restores the legacy module contract expected by the split-delivery workflow:
-- latest_report_file(output_dir)
-- generate_delivery_assets(output_dir, report_path)
+Goals:
+- preserve the working one-click workflow
+- preserve live equity-curve calculation and plotting
+- preserve CID inline chart handling for email compatibility
+- restore the stronger executive-grade email/PDF look & feel
+- keep the public module contract expected by GitHub Actions:
+    * latest_report_file(output_dir)
+    * generate_delivery_assets(output_dir, report_path)
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 import re
 import smtplib
@@ -33,7 +31,6 @@ from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Optional
 
-import json
 import markdown as mdlib
 
 import matplotlib
@@ -43,6 +40,7 @@ from weasyprint import HTML
 
 
 TITLE = "Weekly FX Review"
+DISCLAIMER_LINE = "This report is for informational and educational purposes only; please see the disclaimer at the end."
 REQUIRED_MAIL_TO = "mrkt.rprts@gmail.com"
 
 REPORT_RE = re.compile(r"^weekly_fx_review_(\d{6})(?:_(\d{2}))?\.md$")
@@ -57,6 +55,7 @@ BRAND = {
     "muted": "#6B7882",
     "border": "#D9D3CB",
     "champagne": "#D4B483",
+    "champagne_soft": "#EFE4D2",
 }
 
 REQUIRED_SECTION_HEADINGS = [
@@ -78,7 +77,6 @@ REQUIRED_SECTION_HEADINGS = [
     "## 16. Carry-forward input for next run",
     "## 17. Disclaimer",
 ]
-
 REQUIRED_SECTION15_LABELS = [
     "- Starting capital (USD):",
     "- Invested market value (USD):",
@@ -87,10 +85,20 @@ REQUIRED_SECTION15_LABELS = [
     "- Since inception return (%):",
     "- Base currency:",
 ]
+SECTION16_SENTENCE = "**This section is the canonical default input for the next run unless the user explicitly overrides it.**"
 
-SECTION16_SENTENCE = (
-    "**This section is the canonical default input for the next run unless the user explicitly overrides it.**"
-)
+TV_LINKS = {
+    "USD": "https://www.tradingview.com/chart/?symbol=DXY",
+    "EUR": "https://www.tradingview.com/chart/?symbol=EURUSD",
+    "GBP": "https://www.tradingview.com/chart/?symbol=GBPUSD",
+    "AUD": "https://www.tradingview.com/chart/?symbol=AUDUSD",
+    "NZD": "https://www.tradingview.com/chart/?symbol=NZDUSD",
+    "JPY": "https://www.tradingview.com/chart/?symbol=1/USDJPY",
+    "CHF": "https://www.tradingview.com/chart/?symbol=1/USDCHF",
+    "CAD": "https://www.tradingview.com/chart/?symbol=1/USDCAD",
+    "MXN": "https://www.tradingview.com/chart/?symbol=1/USDMXN",
+    "ZAR": "https://www.tradingview.com/chart/?symbol=1/USDZAR",
+}
 
 
 def require_env(name: str) -> str:
@@ -98,6 +106,34 @@ def require_env(name: str) -> str:
     if not value:
         raise RuntimeError(f"Required environment variable missing: {name}")
     return value
+
+
+def load_json(path: Path) -> dict:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing required file: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def normalize_whitespace(text: str) -> str:
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    if "\\n" in text or "\\t" in text:
+        text = text.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", "\t")
+    return text
+
+
+def strip_citations(text: str) -> str:
+    text = normalize_whitespace(text)
+    patterns = [
+        r"cite.*?",
+        r"filecite.*?",
+        r"\[\d+\]",
+    ]
+    for pattern in patterns:
+        text = re.sub(pattern, "", text, flags=re.DOTALL)
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r" {2,}", " ", text)
+    return text.strip()
 
 
 def report_sort_key(path: Path) -> tuple[str, int]:
@@ -121,33 +157,6 @@ def latest_report_file(output_dir: Path) -> Path:
     return reports[-1]
 
 
-def normalize_whitespace(text: str) -> str:
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    if "\\n" in text or "\\t" in text:
-        text = text.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", "\t")
-    return text
-
-
-def strip_citations(text: str) -> str:
-    text = normalize_whitespace(text)
-    patterns = [
-        r"cite.*?",
-        r"filecite.*?",
-        r"\[\d+\]",
-    ]
-    for pattern in patterns:
-        text = re.sub(pattern, "", text, flags=re.DOTALL)
-    text = re.sub(r"[ \t]+\n", "\n", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
-
-
-def load_json(path: Path) -> dict:
-    if not path.exists():
-        raise FileNotFoundError(f"Missing required file: {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
 def parse_report_date(md_text: str, report_path: Optional[Path] = None) -> str:
     title_match = re.search(
         r"^#\s+Weekly FX Review(?:\s+(\d{4}-\d{2}-\d{2}))?\s*$",
@@ -156,7 +165,6 @@ def parse_report_date(md_text: str, report_path: Optional[Path] = None) -> str:
     )
     if title_match and title_match.group(1):
         return title_match.group(1)
-
     if report_path is not None:
         match = REPORT_RE.match(report_path.name)
         if match:
@@ -165,7 +173,6 @@ def parse_report_date(md_text: str, report_path: Optional[Path] = None) -> str:
             mm = int(token[2:4])
             dd = int(token[4:6])
             return f"{2000 + yy:04d}-{mm:02d}-{dd:02d}"
-
     return datetime.utcnow().strftime("%Y-%m-%d")
 
 
@@ -200,10 +207,43 @@ def extract_labeled_value(section_text: str, label: str) -> str:
     return match.group(1).strip() if match else ""
 
 
+def extract_sections(md_text: str) -> tuple[str, list[dict]]:
+    title = ""
+    sections: list[dict] = []
+    current: Optional[dict] = None
+
+    for raw_line in md_text.splitlines():
+        line = raw_line.rstrip("\n")
+        stripped = line.strip()
+
+        if line.startswith("# "):
+            title = line[2:].strip()
+            continue
+
+        match = SECTION_RE.match(stripped)
+        if match:
+            if current:
+                sections.append(current)
+            current = {
+                "number": int(match.group(1)),
+                "title": match.group(2).strip(),
+                "lines": [],
+            }
+            continue
+
+        if current is not None:
+            current["lines"].append(line)
+
+    if current:
+        sections.append(current)
+
+    return title, sections
+
+
 def validate_required_report(md_text: str) -> None:
-    for heading in REQUIRED_SECTION_HEADINGS:
-        if heading not in md_text:
-            raise RuntimeError(f"Report is missing mandatory section heading: {heading}")
+    missing = [heading for heading in REQUIRED_SECTION_HEADINGS if heading not in md_text]
+    if missing:
+        raise RuntimeError("Report is missing mandatory section headings: " + ", ".join(missing))
     for label in REQUIRED_SECTION15_LABELS:
         if label not in md_text:
             raise RuntimeError(f"Section 15 is missing required label: {label}")
@@ -220,13 +260,16 @@ def validate_report_freshness(md_text: str, portfolio_state: dict) -> None:
         )
 
 
-def plain_text_from_markdown(md_text: str) -> str:
-    html = mdlib.markdown(strip_citations(md_text), extensions=["tables"])
+def html_to_plain_text(html: str) -> str:
     text = re.sub(r"<style.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<script.*?</script>", " ", text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
     text = text.replace("&nbsp;", " ").replace("&amp;", "&")
     return re.sub(r"\s+", " ", text).strip()
+
+
+def plain_text_from_markdown(md_text: str) -> str:
+    return html_to_plain_text(mdlib.markdown(strip_citations(md_text), extensions=["tables", "sane_lists"]))
 
 
 def write_delivery_manifest(manifest_path: Path, report_name: str, recipient: str, attachments: list[str]) -> None:
@@ -262,8 +305,8 @@ def create_equity_curve_png(output_dir: Path, chart_path: Path) -> Optional[Path
     if not dates or not navs:
         return None
 
-    plt.figure(figsize=(8.8, 3.6))
-    plt.plot(dates, navs, marker="o", linewidth=2.0)
+    plt.figure(figsize=(8.8, 3.7))
+    plt.plot(dates, navs, marker="o", linewidth=2.2)
     plt.title("Model portfolio development")
     plt.xlabel("Date")
     plt.ylabel("Portfolio value (USD)")
@@ -274,21 +317,125 @@ def create_equity_curve_png(output_dir: Path, chart_path: Path) -> Optional[Path
     return chart_path if chart_path.exists() else None
 
 
-def inject_chart_block(md_text: str, image_src: Optional[str]) -> str:
-    if not image_src:
-        fallback = (
-            "\n<div class=\"chart-wrap\"><div class=\"chart-label\">Model portfolio development</div>"
-            "<div class=\"chart-missing\">Chart unavailable for this delivery.</div></div>\n"
+def inject_chart_html(section_html: str, image_src: Optional[str]) -> str:
+    if image_src:
+        chart_block = (
+            '<div class="chart-wrap">'
+            '<div class="chart-label">Model portfolio development</div>'
+            f'<img src="{image_src}" alt="Model portfolio development chart">'
+            '</div>'
         )
-        return re.sub(r"(^##\s+7\.\s+.*$)", r"\1" + fallback, md_text, count=1, flags=re.MULTILINE)
+    else:
+        chart_block = (
+            '<div class="chart-wrap">'
+            '<div class="chart-label">Model portfolio development</div>'
+            '<div class="chart-missing">Chart unavailable for this delivery.</div>'
+            '</div>'
+        )
+    return chart_block + section_html
 
-    image_block = (
-        "\n<div class=\"chart-wrap\">"
-        "<div class=\"chart-label\">Model portfolio development</div>"
-        f"<img src=\"{image_src}\" alt=\"Model portfolio development chart\">"
-        "</div>\n"
+
+def autolink_currency_codes(html: str) -> str:
+    placeholders: dict[str, str] = {}
+
+    def stash(match: re.Match) -> str:
+        key = f"__HTMLTAG_{len(placeholders)}__"
+        placeholders[key] = match.group(0)
+        return key
+
+    protected = re.sub(r"<[^>]+>", stash, html)
+    for code, url in TV_LINKS.items():
+        protected = re.sub(
+            rf"\b{re.escape(code)}\b",
+            f'<a class="tv-link" href="{url}" target="_blank" rel="noopener noreferrer">{code}</a>',
+            protected,
+        )
+    for key, value in placeholders.items():
+        protected = protected.replace(key, value)
+    return protected
+
+
+def markdown_block_to_html(text: str) -> str:
+    cleaned = strip_citations(text).strip()
+    if not cleaned:
+        return ""
+    html = mdlib.markdown(
+        cleaned,
+        extensions=["tables", "sane_lists", "fenced_code"],
+        output_format="html5",
     )
-    return re.sub(r"(^##\s+7\.\s+.*$)", r"\1" + image_block, md_text, count=1, flags=re.MULTILINE)
+    return autolink_currency_codes(html)
+
+
+def section_header_html(number: int, title: str) -> str:
+    return (
+        '<table class="section-kicker" role="presentation" cellpadding="0" cellspacing="0"><tr>'
+        f'<td class="section-badge-cell"><span class="section-badge">{number}</span></td>'
+        f'<td class="section-label-cell"><span class="section-label">{title}</span></td>'
+        '</tr></table>'
+    )
+
+
+def render_standard_panel(section: dict, display_number: int, extra_class: str = "", image_src: Optional[str] = None) -> str:
+    body_html = markdown_block_to_html("\n".join(section["lines"]))
+    if section["number"] == 7:
+        body_html = inject_chart_html(body_html, image_src=image_src)
+    return (
+        f'<div class="panel {extra_class}">'
+        f'{section_header_html(display_number, section["title"])}'
+        f'{body_html}'
+        f'</div>'
+    )
+
+
+def extract_regime_summary(executive_text: str) -> str:
+    patterns = [
+        r"strategic regime remains \*\*(.*?)\*\*",
+        r"strategic regime remains (.*?)(?:\.|\n)",
+        r"regime remains \*\*(.*?)\*\*",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, executive_text, flags=re.IGNORECASE | re.DOTALL)
+        if match:
+            return match.group(1).strip()
+    return "Defensive carry-forward regime"
+
+
+def build_summary_cards(
+    portfolio_state: dict,
+    manifest: Optional[dict],
+    overlay: Optional[dict],
+    executive_section_text: str,
+) -> str:
+    regime = extract_regime_summary(executive_section_text)
+    nav = float(portfolio_state.get("nav_usd", 0.0))
+    cash = float(portfolio_state.get("cash_usd", 0.0))
+    unrealized = float(portfolio_state.get("last_valuation", {}).get("unrealized_pnl_usd", 0.0))
+    overlay_ts = ""
+    if manifest:
+        overlay_ts = str(manifest.get("overlay_as_of_utc", ""))
+    if not overlay_ts and overlay:
+        overlay_ts = str(overlay.get("as_of_utc", ""))
+    overlay_short = overlay_ts if not overlay_ts else overlay_ts.replace("T", " ").replace("Z", " UTC")
+
+    usd_ta = ""
+    if overlay:
+        usd_ta = str(overlay.get("currencies", {}).get("USD", {}).get("ta_status", "")).strip()
+    usd_ta = usd_ta or "n/a"
+
+    cards = [
+        ("Primary regime", regime),
+        ("Portfolio value", f"{nav:,.2f} USD"),
+        ("Cash", f"{cash:,.2f} USD"),
+        ("Unrealized P&L", f"{unrealized:,.2f} USD"),
+        ("USD technical", usd_ta.title()),
+        ("Overlay timestamp", overlay_short or "Unavailable"),
+    ]
+
+    return "".join(
+        f'<div class="mini-card"><div class="mini-label">{label}</div><div class="mini-value">{value}</div></div>'
+        for label, value in cards
+    )
 
 
 def build_report_html(
@@ -298,10 +445,57 @@ def build_report_html(
     render_mode: str = "email",
     image_src: Optional[str] = None,
 ) -> str:
-    display_date = format_full_date(report_date_str)
-    body_md = strip_citations(md_text)
-    body_md = inject_chart_block(body_md, image_src=image_src)
-    body_html = mdlib.markdown(body_md, extensions=["tables", "sane_lists"])
+    _, sections = extract_sections(md_text)
+    sections_by_number = {section["number"]: section for section in sections}
+    display_date_str = format_full_date(report_date_str)
+
+    portfolio_state = load_json(output_dir / "fx_portfolio_state.json") if output_dir else {}
+    manifest = load_json(output_dir / "fx_state_refresh_manifest.json") if output_dir and (output_dir / "fx_state_refresh_manifest.json").exists() else None
+    overlay = load_json(output_dir / "fx_technical_overlay.json") if output_dir and (output_dir / "fx_technical_overlay.json").exists() else None
+
+    executive_text = "\n".join(sections_by_number.get(1, {}).get("lines", []))
+    summary_cards = build_summary_cards(portfolio_state, manifest, overlay, executive_text)
+
+    client_grid = []
+    if 1 in sections_by_number:
+        client_grid.append(render_standard_panel(sections_by_number[1], 1, extra_class="panel-exec"))
+    if 2 in sections_by_number:
+        client_grid.append(render_standard_panel(sections_by_number[2], 2, extra_class="panel-snapshot"))
+
+    client_panels = []
+    for display_number, number in enumerate([3, 4, 5, 6, 7], start=3):
+        if number in sections_by_number:
+            extra_class = {
+                3: "panel-regime",
+                4: "panel-radar",
+                5: "panel-risks panel-compact",
+                6: "panel-bottomline panel-compact",
+                7: "panel-equity",
+            }.get(number, "")
+            client_panels.append(
+                render_standard_panel(
+                    sections_by_number[number],
+                    display_number,
+                    extra_class=extra_class,
+                    image_src=image_src if number == 7 else None,
+                )
+            )
+
+    analyst_panels = []
+    analyst_display_number = 1
+    for number in range(8, 18):
+        if number in sections_by_number:
+            extra_class = "panel-analyst"
+            if number == 17:
+                extra_class += " panel-disclaimer"
+            analyst_panels.append(
+                render_standard_panel(
+                    sections_by_number[number],
+                    analyst_display_number,
+                    extra_class=extra_class,
+                )
+            )
+            analyst_display_number += 1
 
     css_common = f"""
     * {{
@@ -316,15 +510,18 @@ def build_report_html(
       -webkit-font-smoothing: antialiased;
     }}
     .report-shell {{
-      max-width: 1080px;
+      max-width: 1180px;
       margin: 0 auto;
-      padding: 0 0 20px 0;
+      padding: 0 0 18px 0;
     }}
     .hero {{
       background: {BRAND['header']};
       color: {BRAND['header_text']};
-      padding: 22px 24px 18px 24px;
+      padding: 20px 24px 18px 24px;
       border-radius: 14px 14px 0 0;
+    }}
+    .hero-secondary {{
+      margin-top: 26px;
     }}
     .hero-table {{
       width: 100%;
@@ -332,6 +529,9 @@ def build_report_html(
     }}
     .hero-table td {{
       vertical-align: middle;
+    }}
+    .hero-left {{
+      text-align: left;
     }}
     .hero-right {{
       text-align: right;
@@ -373,23 +573,116 @@ def build_report_html(
       font-size: 12px;
       margin: 0 0 18px 0;
     }}
+    .summary-strip {{
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 14px;
+      margin: 0 0 18px 0;
+    }}
+    .mini-card {{
+      background: {BRAND['surface']};
+      border: 1px solid {BRAND['border']};
+      border-radius: 16px;
+      padding: 14px 18px;
+    }}
+    .mini-label {{
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: {BRAND['muted']};
+      margin: 0 0 8px 0;
+    }}
+    .mini-value {{
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 700;
+      font-size: 21px;
+      color: {BRAND['ink']};
+      line-height: 1.22;
+    }}
+    .client-grid {{
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 18px;
+      align-items: start;
+      margin: 0 0 18px 0;
+    }}
     .panel {{
       background: {BRAND['surface']};
       border: 1px solid {BRAND['border']};
       border-radius: 18px;
-      padding: 18px 20px;
+      padding: 16px 18px;
+      margin: 0 0 18px 0;
+    }}
+    .panel-compact,
+    .panel-exec,
+    .panel-snapshot,
+    .panel-risks {{
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }}
+    .section-kicker {{
+      width: auto;
+      border-collapse: collapse;
+      margin: 0 0 18px 0;
+    }}
+    .section-kicker td {{
+      vertical-align: middle;
+    }}
+    .section-badge-cell {{
+      width: 64px;
+      padding: 0 16px 0 0;
+      vertical-align: middle;
+    }}
+    .section-label-cell {{
+      padding: 0;
+      vertical-align: middle;
+    }}
+    .section-badge {{
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      background: #2A5384;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 17px;
+      display: block;
+      text-align: center;
+      line-height: 46px;
+      font-family: Arial, Helvetica, sans-serif;
+    }}
+    .section-label {{
+      display: block;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: {BRAND['muted']};
+      line-height: 1.12;
+    }}
+    .panel p, .panel li {{
+      font-size: 14px;
+      line-height: 1.58;
+      margin-top: 0;
+      font-weight: 400;
+    }}
+    .panel strong {{
+      font-weight: 700;
+    }}
+    .panel ul, .panel ol {{
+      margin-top: 0;
+      padding-left: 22px;
     }}
     .panel h1 {{
       display: none;
     }}
     .panel h2 {{
       color: {BRAND['muted']};
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: .08em;
+      font-size: 12px;
       text-transform: uppercase;
-      margin: 24px 0 12px 0;
-      line-height: 1.15;
+      letter-spacing: .08em;
+      font-weight: 700;
+      margin: 18px 0 10px 0;
     }}
     .panel h2:first-of-type {{
       margin-top: 0;
@@ -401,14 +694,13 @@ def build_report_html(
       line-height: 1.35;
       margin: 18px 0 10px 0;
     }}
-    .panel p, .panel li {{
-      font-size: 14px;
-      line-height: 1.58;
-      margin-top: 0;
-    }}
-    .panel ul, .panel ol {{
-      margin-top: 0;
-      padding-left: 22px;
+    .panel h4 {{
+      color: {BRAND['muted']};
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 700;
+      margin: 18px 0 8px 0;
     }}
     .panel table {{
       width: 100%;
@@ -437,6 +729,13 @@ def build_report_html(
     .panel tr:nth-child(even) td {{
       background: #FEFCF9;
     }}
+    .panel blockquote {{
+      margin: 12px 0;
+      padding: 10px 12px;
+      border-left: 4px solid {BRAND['champagne']};
+      background: #F8F3EB;
+      color: {BRAND['muted']};
+    }}
     .chart-wrap {{
       margin: 12px 0 18px 0;
       padding: 12px 14px;
@@ -461,9 +760,13 @@ def build_report_html(
       max-width: 100%;
       height: auto;
       border: 1px solid {BRAND['border']};
-      border-radius: 12px;
-      background: #fff;
+      border-radius: 10px;
+      margin: 0;
       display: block;
+      background: #fff;
+    }}
+    .analyst-divider {{
+      display: none;
     }}
     a {{
       color: #315F8B;
@@ -485,72 +788,154 @@ def build_report_html(
     }}
     """
 
-    if render_mode == "pdf":
-        mode_css = """
-        @page {
-          size: A4 portrait;
-          margin: 12mm;
-        }
-        body {
-          background: #ffffff;
-        }
-        .report-shell {
-          max-width: none;
-          padding-bottom: 0;
-        }
-        .panel, .chart-wrap {
-          page-break-inside: avoid;
-          break-inside: avoid-page;
-        }
-        """
-    else:
-        mode_css = """
-        @media screen and (max-width: 980px) {
-          .hero-table, .hero-table tbody, .hero-table tr, .hero-table td {
-            display: block;
-            width: 100%;
-          }
-          .hero-right {
-            text-align: left;
-            padding-left: 0;
-            padding-top: 10px;
-          }
-          .panel table {
-            table-layout: auto;
-          }
-        }
-        """
+    email_css = """
+    .report-stack {
+      margin-top: 0;
+    }
+    @media screen and (max-width: 1100px) {
+      .summary-strip, .client-grid {
+        display: block;
+      }
+      .hero-table, .hero-table tbody, .hero-table tr, .hero-table td {
+        display: block;
+        width: 100%;
+      }
+      .hero-right {
+        text-align: left;
+        padding-left: 0;
+        padding-top: 10px;
+      }
+      .mini-card, .panel {
+        margin-bottom: 16px;
+      }
+      .panel table {
+        table-layout: auto;
+      }
+    }
+    """
 
-    return f"""
+    pdf_css = """
+    @page {
+      size: A4 portrait;
+      margin: 12mm;
+    }
+    body {
+      background: #ffffff;
+    }
+    .report-shell {
+      max-width: none;
+      padding-bottom: 0;
+    }
+    .hero, .notice, .summary-strip, .panel-compact, .panel-exec, .panel-snapshot, .panel-risks, .mini-card {
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+    .hero {
+      border-radius: 10px 10px 0 0;
+      padding: 20px 22px 18px 22px;
+    }
+    .summary-strip {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .client-grid {
+      display: block;
+      margin-bottom: 8px;
+    }
+    .panel {
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+    .panel table {
+      table-layout: auto;
+      font-size: 11px;
+    }
+    .panel th, .panel td {
+      padding: 6px 8px;
+    }
+    .chart-wrap {
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+    .chart-wrap img {
+      max-height: 170mm;
+      object-fit: contain;
+    }
+    .analyst-divider {
+      display: block;
+      page-break-before: always;
+      break-before: page;
+      margin-top: 4px;
+    }
+    """
+
+    mode_css = pdf_css if render_mode == "pdf" else email_css
+
+    analyst_appendix = ""
+    if analyst_panels:
+        analyst_appendix = (
+            '<div class="analyst-divider"></div>'
+            f'<div class="hero hero-secondary">'
+            f'<table class="hero-table" role="presentation" cellpadding="0" cellspacing="0"><tr>'
+            f'<td class="hero-left"><div class="masthead">WEEKLY FX REVIEW</div><p class="hero-sub">{display_date_str}</p></td>'
+            f'<td class="hero-right"><div class="hero-side-label">Analyst Report</div></td>'
+            f'</tr></table>'
+            f'</div><div class="hero-rule"></div>'
+            + "".join(analyst_panels)
+        )
+
+    html = f"""
     <html>
       <head>
-        <meta charset=\"utf-8\" />
+        <meta charset="utf-8" />
         <style>{css_common}{mode_css}</style>
       </head>
       <body>
-        <div class=\"report-shell\">
-          <div class=\"hero\">
-            <table class=\"hero-table\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\">
-              <tr>
-                <td>
-                  <div class=\"masthead\">WEEKLY FX REVIEW</div>
-                  <p class=\"hero-sub\">{display_date}</p>
-                </td>
-                <td class=\"hero-right\">
-                  <div class=\"hero-side-label\">Investor Report</div>
-                </td>
-              </tr>
-            </table>
+        <div class="report-shell">
+          <div class="hero">
+            <table class="hero-table" role="presentation" cellpadding="0" cellspacing="0"><tr>
+              <td class="hero-left"><div class="masthead">WEEKLY FX REVIEW</div><p class="hero-sub">{display_date_str}</p></td>
+              <td class="hero-right"><div class="hero-side-label">Investor Report</div></td>
+            </tr></table>
           </div>
-          <div class=\"hero-rule\"></div>
-          <div class=\"notice\">This report is for informational and educational purposes only; please see the disclaimer at the end.</div>
-          <div class=\"panel\">
-            {body_html}
-          </div>
+          <div class="hero-rule"></div>
+          <div class="notice">{DISCLAIMER_LINE}</div>
+          <div class="summary-strip">{summary_cards}</div>
+          <div class="client-grid">{''.join(client_grid)}</div>
+          <div class="report-stack">{''.join(client_panels)}{analyst_appendix}</div>
         </div>
       </body>
     </html>
-    """.strip()
+    """
+    return html.strip()
+
+
+def validate_email_body(html_body: str, md_text: Optional[str] = None) -> None:
+    html_lower = html_body.lower()
+    if "weekly fx review" not in html_lower:
+        raise RuntimeError("HTML body is missing required masthead block: WEEKLY FX REVIEW")
+
+    required_tokens = [
+        "Executive summary",
+        "Portfolio action snapshot",
+        "Bottom line",
+        "Current portfolio holdings and cash",
+        "Carry-forward input for next run",
+    ]
+    for token in required_tokens:
+        if token.lower() not in html_lower:
+            raise RuntimeError(f"HTML body is missing required content block: {token}")
+
+    if md_text:
+        plain_html = html_to_plain_text(html_body)
+        plain_md = html_to_plain_text(mdlib.markdown(md_text, extensions=["tables", "sane_lists"]))
+        if len(plain_html) < 0.80 * len(plain_md):
+            raise RuntimeError("HTML body appears too short relative to the full report.")
+
+    for bad_token in ["\\n", "#### ", "|---|", "\\t"]:
+        if bad_token in html_body:
+            raise RuntimeError(f"HTML body still contains raw markdown / escaped formatting token: {bad_token}")
 
 
 def create_pdf_from_html(html: str, output_path: Path) -> None:
@@ -581,6 +966,8 @@ def generate_delivery_assets(output_dir: Path, report_path: Path) -> dict:
         render_mode="email",
         image_src="cid:fx_equity_chart" if chart_exists else None,
     )
+    validate_email_body(html_email, md_text_clean)
+
     html_path = report_path.with_name(f"{safe_stem}_delivery.html")
     html_path.write_text(html_email, encoding="utf-8")
 
