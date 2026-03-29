@@ -1,0 +1,73 @@
+# FX One-Command Start — Time-Based ChatGPT Flow
+
+This file is the **single ChatGPT entrypoint** for the time-based one-command FX flow.
+
+Its job is to make the user remember only one ChatGPT start instruction.
+
+---
+
+## Intended sequence
+
+This start file defines a pragmatic two-stage flow:
+
+### Stage 1 — immediate
+On the initial ChatGPT command:
+1. write a prep trigger file into `control/run_queue/`
+2. that GitHub write triggers `.github/workflows/prep-from-trigger.yml`
+3. schedule a delayed follow-up ChatGPT run about 10 minutes later
+
+### Stage 2 — delayed
+On the delayed follow-up run:
+1. inspect the prep-state files
+2. if prep is fresh, continue into the main prep-first deep-research runtime
+3. generate the report
+4. write it to `output_split_test/weekly_fx_review_YYMMDD.md`
+5. let the push-triggered split delivery workflow handle promote / render / email
+
+---
+
+## Core safety rule
+
+The delayed second-stage run must **not** assume prep succeeded just because 10 minutes passed.
+
+It must first check:
+- `output/fx_state_refresh_manifest.json`
+- `output/fx_technical_overlay.json`
+- `output/fx_portfolio_state.json`
+
+If prep is stale or missing, the delayed run must block rather than publish a stale-state report.
+
+---
+
+## Canonical initial user command behavior
+
+When this start file is used, the assistant should do the following:
+
+1. create a trigger file in `control/run_queue/` using a filename like:
+   - `fx_prep_trigger_YYYYMMDD_HHMMSS.md`
+2. write simple metadata into that file, such as:
+   - requested_at_utc
+   - requested_run_date
+   - mode = one-command-delayed
+3. tell the user that the prep trigger has been written
+4. provide or schedule the delayed follow-up prompt using the content model in:
+   - `prompts/FX_DELAYED_REPORT_TASK_PROMPT.txt`
+
+---
+
+## Important constraint
+
+This file defines the **one-command user experience**, not a perfect event-driven orchestrator.
+
+It is intentionally a **time-based approximation**:
+- GitHub prep is started via the trigger-file write
+- the report run resumes about 10 minutes later
+- freshness is checked before report generation
+
+That means the system is acceptable only because the delayed run blocks on stale prep instead of proceeding blindly.
+
+---
+
+## Canonical one-line mission
+
+**Use this file as the single user-facing ChatGPT start prompt: write a prep trigger file to `control/run_queue/`, start the prep workflow indirectly through GitHub, and then use a delayed follow-up run about 10 minutes later that checks prep freshness before generating the report.**
