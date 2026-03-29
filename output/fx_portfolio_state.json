@@ -5,11 +5,11 @@
   "valuation_source": "Twelve Data latest completed daily bars / overlay reuse",
   "inception_date": "2026-03-25",
   "starting_capital_usd": 100000.0,
-  "cash_usd": 35739.22947660419,
-  "realized_pnl_usd": -0.8111092379758541,
-  "nav_usd": 99273.4,
+  "cash_usd": 35739.23,
+  "realized_pnl_usd": -0.81,
+  "nav_usd": 99270.83,
   "peak_nav_usd": 100000.0,
-  "max_drawdown_pct": -0.7423644694675491,
+  "max_drawdown_pct": -0.7424,
   "positions": [
     {
       "units_ccy": 10301.978994658,
@@ -22,10 +22,10 @@
       "target_weight_pct": 13.0,
       "action_label": "Build on weakness",
       "confidence": "Medium",
-      "current_price_ccyusd": 1.25272468,
-      "market_value_usd": 12905.54,
-      "unrealized_pnl_usd": -155.32,
-      "current_weight_pct": 26.53
+      "current_price_ccyusd": 1.25253639,
+      "market_value_usd": 12903.6,
+      "unrealized_pnl_usd": -157.26,
+      "current_weight_pct": 13.0
     },
     {
       "units_ccy": 2068252.3065263412,
@@ -38,10 +38,10 @@
       "target_weight_pct": 13.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.00623983,
-      "market_value_usd": 12905.54,
-      "unrealized_pnl_usd": -116.64,
-      "current_weight_pct": 20.97
+      "current_price_ccyusd": 0.00623996,
+      "market_value_usd": 12905.81,
+      "unrealized_pnl_usd": -116.38,
+      "current_weight_pct": 13.0
     },
     {
       "units_ccy": 13788.28246172,
@@ -54,10 +54,10 @@
       "target_weight_pct": 10.0,
       "action_label": "Hold",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.71998387,
-      "market_value_usd": 9927.34,
-      "unrealized_pnl_usd": -68.86,
-      "current_weight_pct": 13.89
+      "current_price_ccyusd": 0.72003053,
+      "market_value_usd": 9927.98,
+      "unrealized_pnl_usd": -68.22,
+      "current_weight_pct": 10.0
     },
     {
       "units_ccy": 143919.600969936,
@@ -70,10 +70,10 @@
       "target_weight_pct": 8.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.0551827,
-      "market_value_usd": 7941.87,
-      "unrealized_pnl_usd": -172.73,
-      "current_weight_pct": 10.0
+      "current_price_ccyusd": 0.05516706,
+      "market_value_usd": 7939.62,
+      "unrealized_pnl_usd": -174.98,
+      "current_weight_pct": 8.0
     },
     {
       "units_ccy": 11547.44794695824,
@@ -86,10 +86,10 @@
       "target_weight_pct": 8.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.68776,
-      "market_value_usd": 7941.87,
-      "unrealized_pnl_usd": -103.27,
-      "current_weight_pct": 9.09
+      "current_price_ccyusd": 0.6878,
+      "market_value_usd": 7942.33,
+      "unrealized_pnl_usd": -102.81,
+      "current_weight_pct": 8.0
     },
     {
       "units_ccy": 5236.728485305201,
@@ -102,10 +102,10 @@
       "target_weight_pct": 7.0,
       "action_label": "Reduce",
       "confidence": "Medium",
-      "current_price_ccyusd": 1.327,
-      "market_value_usd": 6949.14,
-      "unrealized_pnl_usd": -78.6,
-      "current_weight_pct": 7.37
+      "current_price_ccyusd": 1.32682,
+      "market_value_usd": 6948.2,
+      "unrealized_pnl_usd": -79.55,
+      "current_weight_pct": 7.0
     },
     {
       "units_ccy": 4301.684302663165,
@@ -118,9 +118,9 @@
       "target_weight_pct": 5.0,
       "action_label": "Reduce",
       "confidence": "Medium-High",
-      "current_price_ccyusd": 1.15389,
-      "market_value_usd": 4963.67,
-      "unrealized_pnl_usd": -29.55,
+      "current_price_ccyusd": 1.15398,
+      "market_value_usd": 4964.06,
+      "unrealized_pnl_usd": -29.16,
       "current_weight_pct": 5.0
     }
   ],
@@ -130,13 +130,13 @@
     "trades_executed": 7
   },
   "last_valuation": {
-    "date": "2026-03-28",
-    "nav_usd": 99273.4,
-    "gross_exposure_usd": 63534.98,
-    "net_exposure_usd": 63534.98,
-    "unrealized_pnl_usd": -724.98,
-    "since_inception_return_pct": -0.7266,
-    "daily_return_pct": -0.0,
-    "overlay_as_of_utc": "2026-03-28T22:45:34Z"
+    "date": "2026-03-29",
+    "nav_usd": 99270.83,
+    "gross_exposure_usd": 63531.6,
+    "net_exposure_usd": 63531.6,
+    "unrealized_pnl_usd": -728.36,
+    "since_inception_return_pct": -0.7292,
+    "daily_return_pct": -0.0026,
+    "overlay_as_of_utc": "2026-03-29T00:25:31Z"
   }
 }

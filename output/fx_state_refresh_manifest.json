@@ -1,0 +1,18 @@
+{
+  "generated_at_utc": "2026-03-29T00:25:31Z",
+  "source_report": "weekly_fx_review_260328_06.md",
+  "overlay_as_of_utc": "2026-03-29T00:25:31Z",
+  "valuation_source": "Twelve Data latest completed daily bars / overlay reuse",
+  "updated_files": [
+    "output/fx_portfolio_state.json",
+    "output/fx_valuation_history.csv",
+    "output/fx_recommendation_scorecard.csv",
+    "output/fx_state_refresh_manifest.json"
+  ],
+  "nav_usd": 99270.83,
+  "cash_usd": 35739.23,
+  "gross_exposure_usd": 63531.6,
+  "unrealized_pnl_usd": -728.36,
+  "daily_return_pct": -0.0026,
+  "since_inception_return_pct": -0.7292
+}
