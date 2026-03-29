@@ -1,0 +1,37 @@
+# FX Delayed Report Task Prompt
+
+Use this prompt for the **delayed second-stage ChatGPT run** in the time-based one-command FX flow.
+
+It is intended to run about **10 minutes after** the prep trigger file has been written to `control/run_queue/`.
+
+---
+
+## Prompt text
+
+Read and follow:
+- `prompts/FX_ONE_COMMAND_START.txt`
+- `control/CHATGPT_PREP_FIRST_RUNBOOK.md`
+- `prompts/FX_DEEP_RESEARCH_RUNTIME_PREP_FIRST.txt`
+
+This is the delayed second-stage run of the time-based one-command FX flow.
+
+Before generating any report:
+1. inspect `output/fx_state_refresh_manifest.json`
+2. inspect `output/fx_technical_overlay.json`
+3. inspect `output/fx_portfolio_state.json`
+4. confirm the prep state is fresh enough for the intended report date
+5. confirm the overlay/state timestamps reconcile
+
+If prep is fresh:
+- continue automatically into the main deep-research/report-generation flow
+- generate the full Weekly FX Review in markdown
+- write it to `output_split_test/weekly_fx_review_YYMMDD.md`
+- if GitHub confirmation is required, show that prompt immediately
+- do not claim delivery success; leave delivery to the push-triggered GitHub workflow
+
+If prep is stale or missing:
+- do not generate the report
+- state clearly that prep did not complete in time or is stale
+- instruct the user to rerun the one-command start or run `Refresh FX technical state` manually first
+
+This delayed run must prefer blocking over publishing a stale-state report.
