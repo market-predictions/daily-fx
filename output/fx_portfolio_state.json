@@ -7,7 +7,7 @@
   "starting_capital_usd": 100000.0,
   "cash_usd": 35768.14,
   "realized_pnl_usd": -1.42,
-  "nav_usd": 99148.1,
+  "nav_usd": 99333.13,
   "peak_nav_usd": 100000.0,
   "max_drawdown_pct": -0.8519,
   "positions": [
@@ -22,10 +22,10 @@
       "target_weight_pct": 13.0,
       "action_label": "Build on weakness",
       "confidence": "Medium",
-      "current_price_ccyusd": 1.25010938,
-      "market_value_usd": 12853.86,
-      "unrealized_pnl_usd": -181.9,
-      "current_weight_pct": 12.96
+      "current_price_ccyusd": 1.25288163,
+      "market_value_usd": 12882.36,
+      "unrealized_pnl_usd": -153.39,
+      "current_weight_pct": 12.97
     },
     {
       "units_ccy": 2064679.3830572,
@@ -38,10 +38,10 @@
       "target_weight_pct": 13.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.00623243,
-      "market_value_usd": 12867.97,
-      "unrealized_pnl_usd": -131.72,
-      "current_weight_pct": 12.98
+      "current_price_ccyusd": 0.00626341,
+      "market_value_usd": 12931.93,
+      "unrealized_pnl_usd": -67.76,
+      "current_weight_pct": 13.02
     },
     {
       "units_ccy": 13793.24163525,
@@ -54,10 +54,10 @@
       "target_weight_pct": 10.0,
       "action_label": "Hold",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.71941411,
-      "market_value_usd": 9923.05,
-      "unrealized_pnl_usd": -76.72,
-      "current_weight_pct": 10.01
+      "current_price_ccyusd": 0.71962637,
+      "market_value_usd": 9925.98,
+      "unrealized_pnl_usd": -73.79,
+      "current_weight_pct": 9.99
     },
     {
       "units_ccy": 144052.34704700002,
@@ -70,10 +70,10 @@
       "target_weight_pct": 8.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.05514451,
-      "market_value_usd": 7943.7,
-      "unrealized_pnl_usd": -178.16,
-      "current_weight_pct": 8.01
+      "current_price_ccyusd": 0.05538129,
+      "market_value_usd": 7977.8,
+      "unrealized_pnl_usd": -144.05,
+      "current_weight_pct": 8.03
     },
     {
       "units_ccy": 11552.9811913137,
@@ -86,10 +86,10 @@
       "target_weight_pct": 8.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.68492,
-      "market_value_usd": 7912.87,
-      "unrealized_pnl_usd": -136.08,
-      "current_weight_pct": 7.98
+      "current_price_ccyusd": 0.68698,
+      "market_value_usd": 7936.67,
+      "unrealized_pnl_usd": -112.28,
+      "current_weight_pct": 7.99
     },
     {
       "units_ccy": 5222.769804972929,
@@ -102,10 +102,10 @@
       "target_weight_pct": 7.0,
       "action_label": "Reduce",
       "confidence": "Medium",
-      "current_price_ccyusd": 1.3238,
-      "market_value_usd": 6913.9,
-      "unrealized_pnl_usd": -95.1,
-      "current_weight_pct": 6.97
+      "current_price_ccyusd": 1.32766,
+      "market_value_usd": 6934.06,
+      "unrealized_pnl_usd": -74.94,
+      "current_weight_pct": 6.98
     },
     {
       "units_ccy": 4320.962284501506,
@@ -118,9 +118,9 @@
       "target_weight_pct": 5.0,
       "action_label": "Reduce",
       "confidence": "Medium-High",
-      "current_price_ccyusd": 1.14896,
-      "market_value_usd": 4964.61,
-      "unrealized_pnl_usd": -50.79,
+      "current_price_ccyusd": 1.15164,
+      "market_value_usd": 4976.19,
+      "unrealized_pnl_usd": -39.21,
       "current_weight_pct": 5.01
     }
   ],
@@ -130,13 +130,13 @@
     "trades_executed": 7
   },
   "last_valuation": {
-    "date": "2026-03-29",
-    "nav_usd": 99148.1,
-    "gross_exposure_usd": 63379.96,
-    "net_exposure_usd": 63379.96,
-    "unrealized_pnl_usd": -850.47,
-    "since_inception_return_pct": -0.8519,
-    "daily_return_pct": -0.1527,
-    "overlay_as_of_utc": "2026-03-29T22:46:54Z"
+    "date": "2026-03-30",
+    "nav_usd": 99333.13,
+    "gross_exposure_usd": 63564.99,
+    "net_exposure_usd": 63564.99,
+    "unrealized_pnl_usd": -665.42,
+    "since_inception_return_pct": -0.6669,
+    "daily_return_pct": 0.1866,
+    "overlay_as_of_utc": "2026-03-30T06:19:57Z"
   }
 }
