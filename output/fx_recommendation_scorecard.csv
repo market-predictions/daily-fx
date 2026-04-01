@@ -299,3 +299,13 @@ run_date,source_report,currency,action_label,target_weight_pct,entry_price_ccyus
 2026-04-01,weekly_fx_review_260330_04.md,NZD,Sell / avoid,0.0,0.5762,strong negative,2026-04-01T07:16:07Z
 2026-04-01,weekly_fx_review_260330_04.md,MXN,Hold / stage,8.0,0.05602928,mixed,2026-04-01T07:16:07Z
 2026-04-01,weekly_fx_review_260330_04.md,ZAR,Sell / avoid,0.0,0.05938489,mixed,2026-04-01T07:16:07Z
+2026-04-01,weekly_fx_review_260330_04.md,USD,Buy,36.0,1.0,positive,2026-04-01T17:07:23Z
+2026-04-01,weekly_fx_review_260330_04.md,EUR,Reduce,5.0,1.16203,negative,2026-04-01T17:07:23Z
+2026-04-01,weekly_fx_review_260330_04.md,JPY,Hold / stage,13.0,0.00630908,negative,2026-04-01T17:07:23Z
+2026-04-01,weekly_fx_review_260330_04.md,CHF,Build on weakness,13.0,1.26249874,mixed,2026-04-01T17:07:23Z
+2026-04-01,weekly_fx_review_260330_04.md,GBP,Reduce,7.0,1.33412,strong negative,2026-04-01T17:07:23Z
+2026-04-01,weekly_fx_review_260330_04.md,AUD,Hold / stage,8.0,0.69491,mixed,2026-04-01T17:07:23Z
+2026-04-01,weekly_fx_review_260330_04.md,CAD,Hold,10.0,0.72082462,negative,2026-04-01T17:07:23Z
+2026-04-01,weekly_fx_review_260330_04.md,NZD,Sell / avoid,0.0,0.57734,strong negative,2026-04-01T17:07:23Z
+2026-04-01,weekly_fx_review_260330_04.md,MXN,Hold / stage,8.0,0.05617365,mixed,2026-04-01T17:07:23Z
+2026-04-01,weekly_fx_review_260330_04.md,ZAR,Sell / avoid,0.0,0.05960129,mixed,2026-04-01T17:07:23Z
