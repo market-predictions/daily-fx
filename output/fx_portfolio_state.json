@@ -7,7 +7,7 @@
   "starting_capital_usd": 100000.0,
   "cash_usd": 35768.14,
   "realized_pnl_usd": -1.42,
-  "nav_usd": 99827.25,
+  "nav_usd": 99724.54,
   "peak_nav_usd": 100000.0,
   "max_drawdown_pct": -0.8519,
   "positions": [
@@ -22,10 +22,10 @@
       "target_weight_pct": 13.0,
       "action_label": "Build on weakness",
       "confidence": "Medium",
-      "current_price_ccyusd": 1.26249874,
-      "market_value_usd": 12981.25,
-      "unrealized_pnl_usd": -54.51,
-      "current_weight_pct": 13.0
+      "current_price_ccyusd": 1.25957275,
+      "market_value_usd": 12951.16,
+      "unrealized_pnl_usd": -84.6,
+      "current_weight_pct": 12.99
     },
     {
       "units_ccy": 2064679.3830572,
@@ -38,9 +38,9 @@
       "target_weight_pct": 13.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.00630908,
-      "market_value_usd": 13026.23,
-      "unrealized_pnl_usd": 26.54,
+      "current_price_ccyusd": 0.00630534,
+      "market_value_usd": 13018.51,
+      "unrealized_pnl_usd": 18.81,
       "current_weight_pct": 13.05
     },
     {
@@ -54,10 +54,10 @@
       "target_weight_pct": 10.0,
       "action_label": "Hold",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.72082462,
-      "market_value_usd": 9942.51,
-      "unrealized_pnl_usd": -57.27,
-      "current_weight_pct": 9.96
+      "current_price_ccyusd": 0.72078825,
+      "market_value_usd": 9942.01,
+      "unrealized_pnl_usd": -57.77,
+      "current_weight_pct": 9.97
     },
     {
       "units_ccy": 144052.34704700002,
@@ -70,9 +70,9 @@
       "target_weight_pct": 8.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.05617365,
-      "market_value_usd": 8091.95,
-      "unrealized_pnl_usd": -29.91,
+      "current_price_ccyusd": 0.05612173,
+      "market_value_usd": 8084.47,
+      "unrealized_pnl_usd": -37.39,
       "current_weight_pct": 8.11
     },
     {
@@ -86,10 +86,10 @@
       "target_weight_pct": 8.0,
       "action_label": "Hold / stage",
       "confidence": "Medium",
-      "current_price_ccyusd": 0.69491,
-      "market_value_usd": 8028.28,
-      "unrealized_pnl_usd": -20.67,
-      "current_weight_pct": 8.04
+      "current_price_ccyusd": 0.69256,
+      "market_value_usd": 8001.13,
+      "unrealized_pnl_usd": -47.82,
+      "current_weight_pct": 8.02
     },
     {
       "units_ccy": 5222.769804972929,
@@ -102,10 +102,10 @@
       "target_weight_pct": 7.0,
       "action_label": "Reduce",
       "confidence": "Medium",
-      "current_price_ccyusd": 1.33412,
-      "market_value_usd": 6967.8,
-      "unrealized_pnl_usd": -41.2,
-      "current_weight_pct": 6.98
+      "current_price_ccyusd": 1.33072,
+      "market_value_usd": 6950.04,
+      "unrealized_pnl_usd": -58.96,
+      "current_weight_pct": 6.97
     },
     {
       "units_ccy": 4320.962284501506,
@@ -118,10 +118,10 @@
       "target_weight_pct": 5.0,
       "action_label": "Reduce",
       "confidence": "Medium-High",
-      "current_price_ccyusd": 1.16203,
-      "market_value_usd": 5021.09,
-      "unrealized_pnl_usd": 5.69,
-      "current_weight_pct": 5.03
+      "current_price_ccyusd": 1.15925,
+      "market_value_usd": 5009.08,
+      "unrealized_pnl_usd": -6.33,
+      "current_weight_pct": 5.02
     }
   ],
   "last_rebalance": {
@@ -131,12 +131,12 @@
   },
   "last_valuation": {
     "date": "2026-04-01",
-    "nav_usd": 99827.25,
-    "gross_exposure_usd": 64059.11,
-    "net_exposure_usd": 64059.11,
-    "unrealized_pnl_usd": -171.33,
-    "since_inception_return_pct": -0.1727,
-    "daily_return_pct": 0.1367,
-    "overlay_as_of_utc": "2026-04-01T17:07:23Z"
+    "nav_usd": 99724.54,
+    "gross_exposure_usd": 63956.4,
+    "net_exposure_usd": 63956.4,
+    "unrealized_pnl_usd": -274.06,
+    "since_inception_return_pct": -0.2755,
+    "daily_return_pct": -0.1029,
+    "overlay_as_of_utc": "2026-04-01T23:06:42Z"
   }
 }
