@@ -1,8 +1,8 @@
 # today_prediction_summary
 
 prediction_score_version: v5.5_prediction_quality_v2
-prediction_reference_timestamp: 2026-03-30 22:21:12
-snapshot_date: 2026-03-30
+prediction_reference_timestamp: 2026-04-02 22:38:34
+snapshot_date: 2026-04-02
 prediction_top_n: 8
 
 ## integrity
@@ -14,27 +14,27 @@ prediction_top_n: 8
 - shadow_watchlist_rows_in_prediction_snapshot: 0
 
 ## ranking
-1. US30 | side=SHORT | grade10=5.38 | grade100=53.8 | band=C | entry=45612.68 | sl=45710.86 | tp1=45493.39 | tp2=45400.61
-2. NETH25 | side=SHORT | grade10=4.96 | grade100=49.6 | band=C | entry=959.47 | sl=962.51 | tp1=955.77 | tp2=952.89
-3. USDCAD | side=SHORT | grade10=4.9 | grade100=49.0 | band=C | entry=1.3719 | sl=1.373 | tp1=1.3706 | tp2=1.3696
-4. USTEC | side=SHORT | grade10=4.88 | grade100=48.8 | band=C | entry=23905.65 | sl=23972.86 | tp1=23823.98 | tp2=23760.46
-5. US500 | side=SHORT | grade10=4.53 | grade100=45.3 | band=C | entry=6512.84 | sl=6528.62 | tp1=6493.67 | tp2=6478.76
-6. AUDUSD | side=SHORT | grade10=4.51 | grade100=45.1 | band=C | entry=0.685 | sl=0.6859 | tp1=0.684 | tp2=0.6831
-7. USDCHF | side=SHORT | grade10=4.5 | grade100=45.0 | band=C | entry=0.7884 | sl=0.7891 | tp1=0.7874 | tp2=0.7867
-8. UK100 | side=SHORT | grade10=4.48 | grade100=44.8 | band=C | entry=9852.19 | sl=9931.53 | tp1=9755.79 | tp2=9680.8
-9. EURAUD | side=LONG | grade10=4.39 | grade100=43.9 | band=C | entry=1.647 | sl=1.6451 | tp1=1.6493 | tp2=1.6512
-10. AUDNZD | side=LONG | grade10=4.26 | grade100=42.6 | band=C | entry=1.198 | sl=1.1971 | tp1=1.1992 | tp2=1.2001
-11. EURUSD | side=SHORT | grade10=4.19 | grade100=41.9 | band=C | entry=1.146 | sl=1.1469 | tp1=1.1449 | tp2=1.1441
-12. EURCHF | side=LONG | grade10=3.52 | grade100=35.2 | band=D | entry=0.911 | sl=0.9103 | tp1=0.912 | tp2=0.9127
-13. DE40 | side=SHORT | grade10=3.25 | grade100=32.5 | band=D | entry=22190.94 | sl=22451.08 | tp1=21874.86 | tp2=21629.02
-14. F40 | side=SHORT | grade10=3.15 | grade100=31.5 | band=D | entry=7617.35 | sl=7688.88 | tp1=7530.45 | tp2=7462.85
-15. US2000 | side=SHORT | grade10=3.07 | grade100=30.7 | band=D | entry=2440.64 | sl=2463.38 | tp1=2413.0 | tp2=2391.51
-16. EURGBP | side=LONG | grade10=2.99 | grade100=29.9 | band=D | entry=0.8668 | sl=0.8654 | tp1=0.8684 | tp2=0.8698
-17. USDJPY | side=LONG | grade10=2.52 | grade100=25.2 | band=D | entry=159.291 | sl=158.863 | tp1=159.811 | tp2=160.215
-18. GBPUSD | side=SHORT | grade10=2.48 | grade100=24.8 | band=E | entry=1.3335 | sl=1.3351 | tp1=1.3316 | tp2=1.3301
-19. EURJPY | side=LONG | grade10=2.48 | grade100=24.8 | band=E | entry=184.109 | sl=183.941 | tp1=184.313 | tp2=184.471
-20. GBPCAD | side=SHORT | grade10=1.7 | grade100=17.0 | band=E | entry=1.8294 | sl=1.8317 | tp1=1.8266 | tp2=1.8244
-21. CADJPY | side=LONG | grade10=1.31 | grade100=13.1 | band=E | entry=116.111 | sl=115.751 | tp1=116.549 | tp2=116.89
-22. NZDCAD | side=SHORT | grade10=0.79 | grade100=7.9 | band=E | entry=0.7994 | sl=0.802 | tp1=0.7961 | tp2=0.7937
-23. AUDCHF | side=LONG | grade10=0.6 | grade100=6.0 | band=E | entry=0.5478 | sl=0.5467 | tp1=0.5492 | tp2=0.5502
-24. GBPJPY | side=SHORT | grade10=0.4 | grade100=4.0 | band=E | entry=212.414 | sl=212.58 | tp1=212.213 | tp2=212.056
+1. NETH25 | side=SHORT | grade10=5.6 | grade100=56.0 | band=B | entry=956.8 | sl=959.37 | tp1=953.67 | tp2=951.23
+2. NZDCAD | side=SHORT | grade10=4.71 | grade100=47.1 | band=C | entry=0.7963 | sl=0.797 | tp1=0.7955 | tp2=0.7949
+3. EURGBP | side=LONG | grade10=4.7 | grade100=47.0 | band=C | entry=0.8691 | sl=0.8684 | tp1=0.8699 | tp2=0.8705
+4. DE40 | side=SHORT | grade10=4.52 | grade100=45.2 | band=C | entry=22420.71 | sl=22526.07 | tp1=22292.7 | tp2=22193.14
+5. AUDNZD | side=LONG | grade10=4.31 | grade100=43.1 | band=C | entry=1.198 | sl=1.1971 | tp1=1.1992 | tp2=1.2001
+6. USDCAD | side=LONG | grade10=4.19 | grade100=41.9 | band=C | entry=1.3929 | sl=1.3919 | tp1=1.3942 | tp2=1.3952
+7. GBPCAD | side=SHORT | grade10=4.17 | grade100=41.7 | band=C | entry=1.8367 | sl=1.8407 | tp1=1.8319 | tp2=1.8282
+8. AUDUSD | side=SHORT | grade10=3.97 | grade100=39.7 | band=D | entry=0.685 | sl=0.6886 | tp1=0.6807 | tp2=0.6773
+9. US30 | side=SHORT | grade10=3.53 | grade100=35.3 | band=D | entry=45228.21 | sl=45348.61 | tp1=45081.92 | tp2=44968.15
+10. EURCHF | side=LONG | grade10=3.52 | grade100=35.2 | band=D | entry=0.9165 | sl=0.9147 | tp1=0.9187 | tp2=0.9203
+11. GBPUSD | side=SHORT | grade10=3.5 | grade100=35.0 | band=D | entry=1.3186 | sl=1.3197 | tp1=1.3173 | tp2=1.3162
+12. EURAUD | side=LONG | grade10=3.33 | grade100=33.3 | band=D | entry=1.6729 | sl=1.6695 | tp1=1.6769 | tp2=1.6801
+13. USTEC | side=SHORT | grade10=3.28 | grade100=32.8 | band=D | entry=22958.51 | sl=23030.75 | tp1=22870.73 | tp2=22802.46
+14. US500 | side=SHORT | grade10=3.28 | grade100=32.8 | band=D | entry=6346.99 | sl=6364.36 | tp1=6325.88 | tp2=6309.46
+15. USDCHF | side=LONG | grade10=2.8 | grade100=28.0 | band=D | entry=0.7998 | sl=0.7984 | tp1=0.8014 | tp2=0.8027
+16. USDJPY | side=LONG | grade10=2.31 | grade100=23.1 | band=E | entry=159.683 | sl=159.559 | tp1=159.833 | tp2=159.95
+17. F40 | side=SHORT | grade10=1.88 | grade100=18.8 | band=E | entry=7728.45 | sl=7769.18 | tp1=7678.95 | tp2=7640.46
+18. EURUSD | side=LONG | grade10=1.71 | grade100=17.1 | band=E | entry=1.1552 | sl=1.154 | tp1=1.1566 | tp2=1.1577
+19. US2000 | side=SHORT | grade10=1.66 | grade100=16.6 | band=E | entry=2415.49 | sl=2423.48 | tp1=2405.78 | tp2=2398.23
+20. EURJPY | side=LONG | grade10=1.18 | grade100=11.8 | band=E | entry=182.99 | sl=182.847 | tp1=183.163 | tp2=183.298
+21. GBPJPY | side=SHORT | grade10=0.87 | grade100=8.7 | band=E | entry=210.572 | sl=210.738 | tp1=210.37 | tp2=210.213
+22. UK100 | side=SHORT | grade10=0.71 | grade100=7.1 | band=E | entry=10077.24 | sl=10099.53 | tp1=10050.16 | tp2=10029.09
+23. AUDCHF | side=LONG | grade10=0.6 | grade100=6.0 | band=E | entry=0.5479 | sl=0.5474 | tp1=0.5484 | tp2=0.5488
+24. CADJPY | side=LONG | grade10=0.0 | grade100=0.0 | band=E | entry=114.641 | sl=114.542 | tp1=114.763 | tp2=114.857
