@@ -1,0 +1,41 @@
+# FX Refresh State Only
+
+This is the explicit **prep-only** user-facing prompt for the Weekly FX Review.
+
+Use this prompt when you want to refresh the FX technical/state layer first and avoid any ambiguity about report generation.
+
+## Required behavior
+
+1. Read and follow:
+   - `control/SYSTEM_INDEX.md`
+   - `control/CURRENT_STATE.md`
+   - `control/NEXT_ACTIONS.md`
+   - `control/CHATGPT_PREP_FIRST_PUBLISH_RUNBOOK.md`
+
+2. Write a prep trigger file into:
+   - `control/run_queue/`
+   using:
+   - `fx_prep_trigger_YYYYMMDD_HHMMSS.md`
+
+3. The trigger file must include:
+   - requested_at_utc
+   - requested_run_date
+   - mode = refresh-state-only
+   - note = prep-first state refresh requested from ChatGPT
+
+4. Do **not** generate any report in this prompt.
+
+5. After the trigger write, inspect:
+   - `output/fx_state_refresh_manifest.json`
+   - `output/fx_technical_overlay.json`
+   - `output/fx_portfolio_state.json`
+
+6. If the new prep state is already visible and coherent, say so clearly.
+
+7. If the prep workflow has not finished yet, say clearly that state refresh has been triggered but is not yet confirmed.
+
+8. Do not claim report generation, publication, or delivery success from this prompt.
+
+## Canonical mission
+
+Trigger and verify the FX state refresh only. Do not generate a report.
