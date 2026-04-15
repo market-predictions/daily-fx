@@ -1,0 +1,53 @@
+# FX Generate And Publish
+
+This is the canonical **generate-and-publish** user-facing prompt for the Weekly FX Review.
+
+Use this prompt only after prep has already been refreshed successfully, or when you want the run to fail loudly if prep is stale.
+
+## Required behavior
+
+1. Read and follow:
+   - `control/SYSTEM_INDEX.md`
+   - `control/CURRENT_STATE.md`
+   - `control/NEXT_ACTIONS.md`
+   - `control/CHATGPT_PREP_FIRST_PUBLISH_RUNBOOK.md`
+   - `prompts/FX_DEEP_RESEARCH_RUNTIME_PREP_FIRST_PUBLISH.txt`
+
+2. Before generating any report, inspect:
+   - `output/fx_state_refresh_manifest.json`
+   - `output/fx_technical_overlay.json`
+   - `output/fx_portfolio_state.json`
+
+3. Block unless all of the following are true:
+   - prep is fresh enough for the intended report date
+   - overlay/state timestamps reconcile
+   - valuation date is acceptable for the intended run
+   - state is not stale or missing
+
+4. If prep is stale or missing:
+   - do not generate the report
+   - say clearly that prep did not complete in time or is stale
+   - instruct the user to run `prompts/FX_REFRESH_STATE_ONLY.txt` first and then rerun this prompt
+
+5. If prep is fresh:
+   - run the full prep-first deep-research flow
+   - generate a brand-new Weekly FX Review in markdown
+   - write it directly to:
+     - `output/weekly_fx_review_YYMMDD.md`
+     - or if needed on the same day:
+       `output/weekly_fx_review_YYMMDD_NN.md`
+   - use deterministic versioning
+   - do not overwrite an existing same-day file unless explicitly instructed
+
+6. Publication rule:
+   - publication means writing the newly generated report into `output/`
+   - do not write the final production run only to `output_split_test/`
+
+7. Delivery rule:
+   - do not claim delivery success
+   - leave render/email completion to the push-triggered GitHub workflow `send-fx-weekly-report.yml` and `send_fxreport.py`
+   - only describe delivery as successful if a real receipt or manifest exists
+
+## Canonical mission
+
+Generate and publish exactly one new Weekly FX Review into `output/` using fresh prep-state, or fail loudly.
