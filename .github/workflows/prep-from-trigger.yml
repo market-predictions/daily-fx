@@ -2,57 +2,91 @@ name: Prep FX state from run-queue trigger
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'control/run_queue/fx_prep_trigger_*.md'
+      - 'control/run_queue/fx_refresh_trigger_*.md'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
-jobs:
-  prep-from-trigger:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+concurrency:
+  group: fx-prep-from-run-queue
+  cancel-in-progress: false
 
+jobs:
+  validate-trigger:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      trigger_path: ${{ steps.detect.outputs.trigger_path }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
-
-      - name: Refresh technical overlay and downstream state
-        env:
-          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
-          TWELVEDATA_CALLS_PER_MINUTE: '8'
-          TWELVEDATA_RATE_LIMIT_WINDOW_SECONDS: '60'
-          TWELVEDATA_RATE_LIMIT_BUFFER_SECONDS: '1.0'
-          TWELVEDATA_MAX_RETRIES: '5'
-          TWELVEDATA_HTTP_TIMEOUT_SECONDS: '30'
-        run: python fx_refresh_all_state.py
-
-      - name: Commit refreshed state files
+      - name: Detect trigger file
+        id: detect
         shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            output/fx_technical_overlay.json \
-            output/fx_portfolio_state.json \
-            output/fx_valuation_history.csv \
-            output/fx_recommendation_scorecard.csv \
-            output/fx_state_refresh_manifest.json
-          if git diff --cached --quiet; then
-            echo "No refreshed state changes to commit"
-          else
-            git commit -m "Refresh FX technical overlay and state from run-queue trigger"
-            git push
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          CHANGED_FILE="$(git diff --name-only "$BEFORE" "$AFTER" | grep '^control/run_queue/fx_.*_trigger_.*\.md$' | head -n 1 || true)"
+
+          if [ -z "$CHANGED_FILE" ]; then
+            echo "No FX trigger file found in push payload" >&2
+            exit 1
           fi
+
+          echo "trigger_path=$CHANGED_FILE" >> "$GITHUB_OUTPUT"
+          echo "TRIGGER_PATH=$CHANGED_FILE"
+
+      - name: Validate trigger content
+        env:
+          TRIGGER_PATH: ${{ steps.detect.outputs.trigger_path }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["TRIGGER_PATH"])
+          text = path.read_text(encoding="utf-8")
+
+          required_substrings = [
+              "requested_at_utc",
+              "requested_run_date",
+              "mode",
+              "note",
+          ]
+
+          missing = [item for item in required_substrings if item not in text]
+          if missing:
+              raise SystemExit(f"Trigger file validation failed for {path}: missing {missing}")
+
+          allowed_modes = (
+              "mode = one-command-delayed",
+              "mode = generate-and-publish",
+              "mode = refresh-fx-state",
+              "mode: one-command-delayed",
+              "mode: generate-and-publish",
+              "mode: refresh-fx-state",
+          )
+
+          if not any(mode in text for mode in allowed_modes):
+              raise SystemExit(
+                  f"Trigger file validation failed for {path}: mode must be one-command-delayed, generate-and-publish, or refresh-fx-state"
+              )
+
+          print(f"TRIGGER_VALID | path={path}")
+          PY
+
+  refresh-state:
+    needs:
+      - validate-trigger
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.validate-trigger.result == 'success' }}
+    uses: ./.github/workflows/refresh-fx-state.yml
+    secrets: inherit
