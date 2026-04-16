@@ -68,6 +68,15 @@
   - stale report artifacts
 - Done when: stale inputs cannot silently flatten, distort, or misstate the portfolio or report.
 
+### 6A. Keep the repo-native refresh trigger path authoritative
+- Owner: `[ASSISTANT]`
+- Action:
+  - use `control/run_queue/` as the fallback trigger surface when ChatGPT cannot dispatch GitHub Actions directly
+  - keep `.github/workflows/prep-from-trigger.yml` as the queue bridge
+  - keep `.github/workflows/refresh-fx-state.yml` as the canonical refresh workflow
+  - verify that ChatGPT still checks workflow success plus refreshed files on `main` before continuing
+- Done when: the prep-first flow works through either direct dispatch or a committed trigger file without changing the verification standard.
+
 ---
 
 ## Phase 3 — complete the as-is split architecture safely
@@ -144,11 +153,12 @@
 The best next move after this update is:
 1. keep the ChatGPT Project lean with `control/PROJECT_BOOTSTRAP.md` as the default upload
 2. use the control-layer read order for each serious FX session
-3. run split comparisons through `prompts/as_is_split/FX_RUNTIME_SPLIT.txt`
-4. only after output validation, continue boundary tightening in production-adjacent files
+3. use the repo-native refresh trigger path whenever direct workflow dispatch is unavailable
+4. run split comparisons through `prompts/as_is_split/FX_RUNTIME_SPLIT.txt`
+5. only after output validation, continue boundary tightening in production-adjacent files
 
 ---
 
 ## Current checkpoint
 
-**Architecture transition in progress — split runtime exists, production prompt remains protected, control layer should now align fully with the lean bootstrap + live GitHub reading model.**
+**Architecture transition in progress — split runtime exists, production prompt remains protected, repo-native prep trigger fallback is now defined, and control docs should align fully with the lean bootstrap + live GitHub reading model.**
