@@ -14,7 +14,7 @@ It must start with a **state refresh**.
 
 The mandatory sequence is:
 
-1. run `.github/workflows/refresh-fx-state.yml`
+1. start the FX state refresh
 2. wait for that workflow to finish successfully
 3. confirm that the refreshed state files were committed to `main`
 4. only then start the ChatGPT deep-research runtime
@@ -44,14 +44,42 @@ That is not acceptable for the production-style ChatGPT-first flow.
 
 ## Mandatory prep workflow
 
-Run this workflow first:
+The canonical prep workflow is:
 - `.github/workflows/refresh-fx-state.yml`
 
-That workflow refreshes the full technical/state layer in this order:
-1. `fx_technical_overlay.py`
-2. `fx_refresh_portfolio_state.py`
+There are two acceptable ways to start it:
 
-The workflow updates and commits:
+### Option A — direct workflow dispatch
+Run this workflow directly:
+- `.github/workflows/refresh-fx-state.yml`
+
+### Option B — repo-native queue trigger
+If direct workflow dispatch is not available from the active ChatGPT environment, write a trigger file into:
+- `control/run_queue/`
+
+Accepted filename patterns:
+- `fx_prep_trigger_YYYYMMDD_HHMMSS.md`
+- `fx_refresh_trigger_YYYYMMDD_HHMMSS.md`
+
+Minimum required fields:
+- `requested_at_utc`
+- `requested_run_date`
+- `mode`
+- `note`
+
+For refresh-only use:
+- `mode: refresh-fx-state`
+
+For prep-first generation use:
+- `mode: generate-and-publish`
+
+That trigger file is consumed by:
+- `.github/workflows/prep-from-trigger.yml`
+
+That workflow validates the trigger and then calls:
+- `.github/workflows/refresh-fx-state.yml`
+
+The refresh workflow updates and commits:
 - `output/fx_technical_overlay.json`
 - `output/fx_portfolio_state.json`
 - `output/fx_valuation_history.csv`
@@ -91,7 +119,7 @@ If those conditions are not met, the ChatGPT run should be treated as blocked by
 ## Canonical ChatGPT-first sequence
 
 ### Phase 1 — prep
-1. trigger `Refresh FX technical state`
+1. trigger `Refresh FX technical state` directly or via the run-queue trigger file
 2. wait for success
 3. confirm state refresh commit landed on `main`
 
