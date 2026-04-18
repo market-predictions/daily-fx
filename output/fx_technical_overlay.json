@@ -1,5 +1,5 @@
 {
-  "as_of_utc": "2026-04-17T14:06:33Z",
+  "as_of_utc": "2026-04-18T07:24:02Z",
   "anchor_currency": "USD",
   "source": "Twelve Data API",
   "rate_limit_config": {
@@ -20,14 +20,14 @@
       "Technical_Score_0_4": 2.7,
       "Technical_Verdict": "positive",
       "Evidence": {
-        "latest_close": 1.18339,
-        "d1_ema20": 1.168284,
-        "d1_ema50": 1.165124,
-        "w1_ema13": 1.166221,
-        "w1_ema26": 1.167315,
-        "recent_d1_median_abs_pct_change": 0.003121,
+        "latest_close": 1.1763,
+        "d1_ema20": 1.16845,
+        "d1_ema50": 1.165301,
+        "w1_ema13": 1.165193,
+        "w1_ema26": 1.166439,
+        "recent_d1_median_abs_pct_change": 0.002253,
         "daily_bars_used": 260,
-        "weekly_bars_built": 42
+        "weekly_bars_built": 41
       }
     },
     {
@@ -42,14 +42,14 @@
       "Technical_Score_0_4": 2.7,
       "Technical_Verdict": "positive",
       "Evidence": {
-        "latest_close": 1.35774,
-        "d1_ema20": 1.342145,
-        "d1_ema50": 1.339804,
-        "w1_ema13": 1.340298,
-        "w1_ema26": 1.341489,
-        "recent_d1_median_abs_pct_change": 0.003353,
+        "latest_close": 1.35182,
+        "d1_ema20": 1.342563,
+        "d1_ema50": 1.340055,
+        "w1_ema13": 1.339423,
+        "w1_ema26": 1.340365,
+        "recent_d1_median_abs_pct_change": 0.003139,
         "daily_bars_used": 260,
-        "weekly_bars_built": 42
+        "weekly_bars_built": 41
       }
     },
     {
@@ -64,14 +64,14 @@
       "Technical_Score_0_4": 3.85,
       "Technical_Verdict": "strong positive",
       "Evidence": {
-        "latest_close": 0.72102,
-        "d1_ema20": 0.705271,
-        "d1_ema50": 0.701264,
-        "w1_ema13": 0.696594,
-        "w1_ema26": 0.685788,
-        "recent_d1_median_abs_pct_change": 0.003866,
+        "latest_close": 0.71674,
+        "d1_ema20": 0.706006,
+        "d1_ema50": 0.701714,
+        "w1_ema13": 0.695985,
+        "w1_ema26": 0.685534,
+        "recent_d1_median_abs_pct_change": 0.003297,
         "daily_bars_used": 260,
-        "weekly_bars_built": 42
+        "weekly_bars_built": 41
       }
     },
     {
@@ -86,33 +86,33 @@
       "Technical_Score_0_4": 2.2,
       "Technical_Verdict": "mixed",
       "Evidence": {
-        "latest_close": 0.59209,
-        "d1_ema20": 0.583217,
-        "d1_ema50": 0.583899,
-        "w1_ema13": 0.584147,
-        "w1_ema26": 0.584708,
-        "recent_d1_median_abs_pct_change": 0.003922,
+        "latest_close": 0.5881,
+        "d1_ema20": 0.583347,
+        "d1_ema50": 0.583917,
+        "w1_ema13": 0.583568,
+        "w1_ema26": 0.5842,
+        "recent_d1_median_abs_pct_change": 0.003848,
         "daily_bars_used": 260,
-        "weekly_bars_built": 42
+        "weekly_bars_built": 41
       }
     },
     {
       "pair": "USDJPY",
       "symbol": "USD/JPY",
       "W1_Bias": "bullish",
-      "D1_Bias": "neutral",
-      "Alignment": "mixed",
+      "D1_Bias": "mild bullish",
+      "Alignment": "aligned bullish",
       "Pivot_Regime": "bearish",
       "Pivot_Zone_Fit": "below pivot",
-      "Pivot_Conflict": false,
-      "Technical_Score_0_4": 2.6,
+      "Pivot_Conflict": true,
+      "Technical_Score_0_4": 3.05,
       "Technical_Verdict": "positive",
       "Evidence": {
-        "latest_close": 158.09966,
-        "d1_ema20": 159.116796,
-        "d1_ema50": 158.576313,
-        "w1_ema13": 157.870565,
-        "w1_ema26": 156.061619,
+        "latest_close": 158.62609,
+        "d1_ema20": 159.115206,
+        "d1_ema50": 158.598023,
+        "w1_ema13": 157.945769,
+        "w1_ema26": 156.100614,
         "recent_d1_median_abs_pct_change": 0.001151,
         "daily_bars_used": 260,
         "weekly_bars_built": 44
@@ -130,11 +130,11 @@
       "Technical_Score_0_4": 1.0,
       "Technical_Verdict": "negative",
       "Evidence": {
-        "latest_close": 0.77836,
-        "d1_ema20": 0.788669,
-        "d1_ema50": 0.788052,
-        "w1_ema13": 0.786984,
-        "w1_ema26": 0.789106,
+        "latest_close": 0.78095,
+        "d1_ema20": 0.788226,
+        "d1_ema50": 0.787902,
+        "w1_ema13": 0.787354,
+        "w1_ema26": 0.789298,
         "recent_d1_median_abs_pct_change": 0.00164,
         "daily_bars_used": 260,
         "weekly_bars_built": 43
@@ -152,14 +152,14 @@
       "Technical_Score_0_4": 1.0,
       "Technical_Verdict": "negative",
       "Evidence": {
-        "latest_close": 1.36697,
-        "d1_ema20": 1.380256,
-        "d1_ema50": 1.378085,
-        "w1_ema13": 1.376752,
-        "w1_ema26": 1.377544,
-        "recent_d1_median_abs_pct_change": 0.001891,
+        "latest_close": 1.36929,
+        "d1_ema20": 1.379405,
+        "d1_ema50": 1.377825,
+        "w1_ema13": 1.377097,
+        "w1_ema26": 1.378052,
+        "recent_d1_median_abs_pct_change": 0.001857,
         "daily_bars_used": 260,
-        "weekly_bars_built": 42
+        "weekly_bars_built": 41
       }
     },
     {
@@ -174,12 +174,12 @@
       "Technical_Score_0_4": 0.15,
       "Technical_Verdict": "strong negative",
       "Evidence": {
-        "latest_close": 17.17463,
-        "d1_ema20": 17.494638,
-        "d1_ema50": 17.59942,
-        "w1_ema13": 17.649187,
-        "w1_ema26": 17.82209,
-        "recent_d1_median_abs_pct_change": 0.003505,
+        "latest_close": 17.31758,
+        "d1_ema20": 17.489736,
+        "d1_ema50": 17.593596,
+        "w1_ema13": 17.669608,
+        "w1_ema26": 17.832679,
+        "recent_d1_median_abs_pct_change": 0.003473,
         "daily_bars_used": 260,
         "weekly_bars_built": 42
       }
@@ -196,11 +196,11 @@
       "Technical_Score_0_4": 0.15,
       "Technical_Verdict": "strong negative",
       "Evidence": {
-        "latest_close": 16.21508,
-        "d1_ema20": 16.573508,
-        "d1_ema50": 16.605223,
-        "w1_ema13": 16.605082,
-        "w1_ema26": 16.729439,
+        "latest_close": 16.3058,
+        "d1_ema20": 16.556322,
+        "d1_ema50": 16.597114,
+        "w1_ema13": 16.618042,
+        "w1_ema26": 16.736159,
         "recent_d1_median_abs_pct_change": 0.003412,
         "daily_bars_used": 260,
         "weekly_bars_built": 42
