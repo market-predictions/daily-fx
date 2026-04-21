@@ -1,0 +1,99 @@
+name: Promote split FX report to production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "output_split_test/weekly_fx_review_*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fx-split-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote-split-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect split report path
+        id: detect
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.sha }}"
+            CHANGED_FILE="$(git diff --name-only "$BEFORE" "$AFTER" | grep '^output_split_test/weekly_fx_review_.*\.md$' | sort | tail -n 1 || true)"
+          else
+            CHANGED_FILE="$(ls -1 output_split_test/weekly_fx_review_*.md 2>/dev/null | sort | tail -n 1 || true)"
+          fi
+
+          if [ -z "$CHANGED_FILE" ]; then
+            echo "No split FX report found to promote" >&2
+            exit 1
+          fi
+
+          echo "split_path=$CHANGED_FILE" >> "$GITHUB_OUTPUT"
+          echo "SPLIT_PATH=$CHANGED_FILE"
+
+      - name: Promote split report into output/
+        env:
+          SPLIT_PATH: ${{ steps.detect.outputs.split_path }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          split_path = Path(os.environ['SPLIT_PATH'])
+          if not split_path.exists():
+              raise SystemExit(f"Split report not found: {split_path}")
+
+          name_re = re.compile(r'^weekly_fx_review_(\d{6})(?:_(\d{2}))?\.md$')
+          match = name_re.match(split_path.name)
+          if not match:
+              raise SystemExit(f"Unexpected split report filename: {split_path.name}")
+
+          date_token = match.group(1)
+          output_dir = Path('output')
+          output_dir.mkdir(parents=True, exist_ok=True)
+
+          same_day = []
+          for path in output_dir.glob(f'weekly_fx_review_{date_token}*.md'):
+              existing = name_re.match(path.name)
+              if existing and existing.group(1) == date_token:
+                  version = int(existing.group(2) or '0')
+                  same_day.append((version, path.name))
+
+          if not same_day:
+              dest_name = f'weekly_fx_review_{date_token}.md'
+          else:
+              next_version = max(version for version, _ in same_day) + 1
+              dest_name = f'weekly_fx_review_{date_token}_{next_version:02d}.md'
+
+          dest_path = output_dir / dest_name
+          dest_path.write_text(split_path.read_text(encoding='utf-8'), encoding='utf-8')
+          print(f'PROMOTED_SPLIT_REPORT | source={split_path} | destination={dest_path}')
+          PY
+
+      - name: Commit promoted production report
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/weekly_fx_review_*.md
+          if git diff --cached --quiet; then
+            echo "No production report changes to commit"
+          else
+            git commit -m "Promote split FX report into output/"
+            git push
+          fi
