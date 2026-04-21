@@ -488,6 +488,7 @@ def build_report_html(
             )
 
     analyst_panels = []
+    analyst_display_number = 1
     for number in range(8, 18):
         if number in sections_by_number:
             extra_class = "panel-analyst"
