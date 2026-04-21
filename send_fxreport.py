@@ -18,6 +18,7 @@ Goals:
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
 import json
 import os
@@ -317,6 +318,11 @@ def create_equity_curve_png(output_dir: Path, chart_path: Path) -> Optional[Path
     return chart_path if chart_path.exists() else None
 
 
+def png_to_data_uri(path: Path) -> str:
+    b64 = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{b64}"
+
+
 def inject_chart_html(section_html: str, image_src: Optional[str]) -> str:
     if image_src:
         chart_block = (
@@ -482,7 +488,6 @@ def build_report_html(
             )
 
     analyst_panels = []
-    analyst_display_number = 1
     for number in range(8, 18):
         if number in sections_by_number:
             extra_class = "panel-analyst"
@@ -539,7 +544,7 @@ def build_report_html(
       padding-left: 24px;
     }}
     .masthead {{
-      font-family: Georgia, "Times New Roman", serif;
+      font-family: Georgia, \"Times New Roman\", serif;
       font-weight: 700;
       font-size: 30px;
       letter-spacing: 1px;
@@ -594,7 +599,7 @@ def build_report_html(
       margin: 0 0 8px 0;
     }}
     .mini-value {{
-      font-family: Georgia, "Times New Roman", serif;
+      font-family: Georgia, \"Times New Roman\", serif;
       font-weight: 700;
       font-size: 21px;
       color: {BRAND['ink']};
@@ -977,8 +982,10 @@ def generate_delivery_assets(output_dir: Path, report_path: Path) -> dict:
         report_date_str,
         output_dir=output_dir,
         render_mode="pdf",
-        image_src=chart_path.resolve().as_uri() if chart_exists else None,
+        image_src=png_to_data_uri(chart_path) if chart_exists else None,
     )
+    if chart_exists and 'data:image/png;base64,' not in html_pdf:
+        raise RuntimeError("FX equity curve image was not embedded into PDF HTML.")
     create_pdf_from_html(html_pdf, pdf_path)
 
     if not pdf_path.exists() or pdf_path.stat().st_size <= 0:
