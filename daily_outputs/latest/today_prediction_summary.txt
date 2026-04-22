@@ -1,8 +1,8 @@
 # today_prediction_summary
 
 prediction_score_version: v5.5_prediction_quality_v2
-prediction_reference_timestamp: 2026-04-21 08:12:07
-snapshot_date: 2026-04-21
+prediction_reference_timestamp: 2026-04-22 14:20:04
+snapshot_date: 2026-04-22
 prediction_top_n: 8
 
 ## integrity
@@ -11,22 +11,22 @@ prediction_top_n: 8
 - prediction_uses_historical_outcome_fields: False
 - prediction_forbidden_fields_nonnull_count: 0
 - primary_shortlist_rows_in_prediction_snapshot: 0
-- shadow_watchlist_rows_in_prediction_snapshot: 0
+- shadow_watchlist_rows_in_prediction_snapshot: 1
 
 ## ranking
-1. EURGBP | side=LONG | grade10=4.72 | grade100=47.2 | band=C | entry=0.8712 | sl=0.8705 | tp1=0.872 | tp2=0.8727
-2. EURAUD | side=SHORT | grade10=4.16 | grade100=41.6 | band=C | entry=1.6456 | sl=1.6469 | tp1=1.6441 | tp2=1.6428
-3. AUDCHF | side=LONG | grade10=4.05 | grade100=40.5 | band=C | entry=0.5579 | sl=0.5575 | tp1=0.5584 | tp2=0.5589
-4. NZDCAD | side=LONG | grade10=4.0 | grade100=40.0 | band=C | entry=0.8059 | sl=0.8053 | tp1=0.8067 | tp2=0.8073
-5. USDCAD | side=SHORT | grade10=3.82 | grade100=38.2 | band=D | entry=1.3659 | sl=1.3677 | tp1=1.3637 | tp2=1.362
-6. EURUSD | side=LONG | grade10=3.71 | grade100=37.1 | band=D | entry=1.1764 | sl=1.1749 | tp1=1.1782 | tp2=1.1796
-7. GBPUSD | side=LONG | grade10=3.51 | grade100=35.1 | band=D | entry=1.3507 | sl=1.349 | tp1=1.3527 | tp2=1.3543
-8. AUDUSD | side=LONG | grade10=3.31 | grade100=33.1 | band=D | entry=0.7151 | sl=0.7136 | tp1=0.7169 | tp2=0.7183
-9. USDJPY | side=LONG | grade10=3.3 | grade100=33.0 | band=D | entry=159.067 | sl=158.944 | tp1=159.218 | tp2=159.335
-10. EURJPY | side=LONG | grade10=2.65 | grade100=26.5 | band=D | entry=187.113 | sl=186.879 | tp1=187.397 | tp2=187.618
-11. CADJPY | side=LONG | grade10=2.03 | grade100=20.3 | band=E | entry=116.461 | sl=116.316 | tp1=116.638 | tp2=116.776
-12. GBPJPY | side=LONG | grade10=1.99 | grade100=19.9 | band=E | entry=214.765 | sl=214.497 | tp1=215.091 | tp2=215.345
-13. EURCHF | side=SHORT | grade10=1.69 | grade100=16.9 | band=E | entry=0.9178 | sl=0.9185 | tp1=0.9169 | tp2=0.9163
-14. AUDNZD | side=LONG | grade10=0.65 | grade100=6.5 | band=E | entry=1.2115 | sl=1.2106 | tp1=1.2126 | tp2=1.2135
-15. USDCHF | side=SHORT | grade10=0.6 | grade100=6.0 | band=E | entry=0.7802 | sl=0.7818 | tp1=0.7782 | tp2=0.7767
-16. GBPCAD | side=LONG | grade10=0.0 | grade100=0.0 | band=E | entry=1.8433 | sl=1.8419 | tp1=1.8451 | tp2=1.8465
+1. EURUSD | side=SHORT | grade10=4.75 | grade100=47.5 | band=C | entry=1.1736 | sl=1.1746 | tp1=1.1725 | tp2=1.1717
+2. EURGBP | side=SHORT | grade10=4.48 | grade100=44.8 | band=C | entry=0.8681 | sl=0.8692 | tp1=0.8668 | tp2=0.8658
+3. USDJPY | side=LONG | grade10=4.28 | grade100=42.8 | band=C | entry=159.191 | sl=159.038 | tp1=159.377 | tp2=159.522
+4. USDCAD | side=SHORT | grade10=4.04 | grade100=40.4 | band=C | entry=1.3652 | sl=1.3669 | tp1=1.3631 | tp2=1.3615
+5. EURJPY | side=SHORT | grade10=3.77 | grade100=37.7 | band=D | entry=186.836 | sl=186.982 | tp1=186.659 | tp2=186.521
+6. NZDCAD | side=LONG | grade10=3.53 | grade100=35.3 | band=D | entry=0.8078 | sl=0.8071 | tp1=0.8085 | tp2=0.8091
+7. EURCHF | side=SHORT | grade10=3.47 | grade100=34.7 | band=D | entry=0.918 | sl=0.9188 | tp1=0.9172 | tp2=0.9165
+8. EURAUD | side=SHORT | grade10=3.39 | grade100=33.9 | band=D | entry=1.6377 | sl=1.6398 | tp1=1.6352 | tp2=1.6333
+9. CADJPY | side=LONG | grade10=2.86 | grade100=28.6 | band=D | entry=116.597 | sl=116.451 | tp1=116.774 | tp2=116.912
+10. GBPJPY | side=LONG | grade10=2.58 | grade100=25.8 | band=D | entry=215.191 | sl=215.023 | tp1=215.394 | tp2=215.553
+11. GBPCAD | side=SHORT | grade10=2.58 | grade100=25.8 | band=D | entry=1.8457 | sl=1.8472 | tp1=1.844 | tp2=1.8426
+12. USDCHF | side=LONG | grade10=1.71 | grade100=17.1 | band=E | entry=0.7823 | sl=0.7817 | tp1=0.783 | tp2=0.7836
+13. AUDNZD | side=SHORT | grade10=1.5 | grade100=15.0 | band=E | entry=1.2112 | sl=1.2158 | tp1=1.2057 | tp2=1.2014
+14. GBPUSD | side=SHORT | grade10=0.79 | grade100=7.9 | band=E | entry=1.3516 | sl=1.3526 | tp1=1.3503 | tp2=1.3493
+15. AUDUSD | side=SHORT | grade10=0.46 | grade100=4.6 | band=E | entry=0.7165 | sl=0.7171 | tp1=0.7158 | tp2=0.7153
+16. AUDCHF | side=SHORT | grade10=0.4 | grade100=4.0 | band=E | entry=0.5605 | sl=0.561 | tp1=0.56 | tp2=0.5596
