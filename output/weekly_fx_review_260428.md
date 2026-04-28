@@ -12,7 +12,7 @@ The highest-conviction sleeves are now **AUD**, **CAD**, **CHF**, **MXN**, and a
 
 Policy divergence still supports selective rotation rather than indiscriminate beta. The Fed, ECB, BoE, and BoC remain in cautious wait-and-assess mode. The **RBA** remains the clearest developed-market hawkish outlier, while **Banxico** still leaves **MXN** with a meaningful carry cushion even after easing. The **BoJ** remains the lagging reserve-bank story inside this framework.
 
-The live implementation portfolio now stands at **100,538.00 USD**, with **24,165.26 USD** in cash and **545.85 USD** in unrealized P&L. The direction is unchanged, but the latest marked-to-market state is firmer than the prior 23 April report: keep reducing excess **USD** defence, favour **AUD**, **CAD**, **CHF**, **MXN**, and **GBP**, keep **EUR** and **NZD** as staged supporting sleeves, and continue treating **JPY** as a reduced reserve residual rather than a preferred haven allocation.
+The live implementation portfolio now stands at **100,678.46 USD**, with **24,165.26 USD** in cash and **686.33 USD** in unrealized P&L. The direction is unchanged, but the latest marked-to-market state is firmer than the prior 24 April mark: keep reducing excess **USD** defence, favour **AUD**, **CAD**, **CHF**, **MXN**, and **GBP**, keep **EUR** and **NZD** as staged supporting sleeves, and continue treating **JPY** as a reduced reserve residual rather than a preferred haven allocation.
 
 ## 2. Portfolio action snapshot
 
@@ -39,7 +39,7 @@ The target structure for this run remains: **USD 24 / CHF 12 / JPY 5 / CAD 11 / 
 - **USD liquidity / funding:** still relevant, but less dominant than in the earlier defensive regime.
 - **Commodity impulse:** still supportive for **AUD** and **CAD**, with second-order support for selective carry trades.
 - **Trade-policy backdrop:** still a live uncertainty channel for growth, margins, and confidence.
-- **Technical overlay:** strongest in **GBP**, **AUD**, **CAD**, **CHF**, and **MXN**; constructive in **NZD**; mixed in **EUR** and **ZAR**; negative in **USD**; and strongly negative in **JPY**.
+- **Technical overlay:** strongest in **GBP**, **AUD**, **CAD**, **CHF**, and **MXN**; constructive in **NZD**; mixed in **EUR**; negative in **USD**; and strongly negative in **JPY**.
 
 The right macro label remains **selective non-USD rotation under persistent geopolitical and energy stress**. This is not broad reflation optimism. It is a regime in which the market is less willing to pay top price for broad **USD** defence, while still demanding selectivity and defensive ballast.
 
@@ -67,30 +67,32 @@ The right macro label remains **selective non-USD rotation under persistent geop
 
 ## 6. Bottom line
 
-The right posture remains **measured rotation out of oversized USD defensiveness into the best-confirmed non-USD sleeves**. **AUD** and **CAD** remain the cleanest developed-market cyclical sleeves. **CHF** remains the main defensive diversifier. **MXN** remains an attractive carry satellite. **GBP** has improved but still belongs below the highest-conviction core. **EUR** still justifies a staged rebuild. **NZD** remains small. **JPY** should remain cut back, not rebuilt. **USD** remains core through cash, but at a materially lower target weight than in the earlier defensive regime.
+The right posture remains **measured rotation out of oversized USD defensiveness into the best-confirmed non-USD sleeves**. **AUD** and **CAD** remain the cleanest developed-market cyclical sleeves. **CHF** remains the main defensive diversifier. **MXN** remains a live carry satellite. **GBP** has improved but still belongs below the highest-conviction core. **EUR** still justifies a staged rebuild. **NZD** remains small. **JPY** should remain cut back, not rebuilt. **USD** remains core through cash, but at a materially lower target weight than in the earlier defensive regime.
 
 ## 7. Equity curve and portfolio development
 
-Valuation source: **Twelve Data latest completed daily bars / overlay reuse**. Valuation date: **2026-04-24**. Engine overlay timestamp: **2026-04-24T21:48:25Z**.
+Valuation source: **Twelve Data latest completed daily bars / overlay reuse**. Valuation date: **2026-04-27**. Engine overlay timestamp: **2026-04-27T23:46:51Z**.
 
-- Net asset value (USD): **100,538.00**
+- Net asset value (USD): **100,678.46**
 - Cash (USD): **24,165.26**
-- Gross exposure (USD): **76,372.74**
-- Net exposure (USD): **76,372.74**
+- Gross exposure (USD): **76,513.20**
+- Net exposure (USD): **76,513.20**
 - Realized P&L (USD): **-7.87**
-- Unrealized P&L (USD): **545.85**
-- Daily return (%): **0.2769**
-- Since inception return (%): **0.5380**
+- Unrealized P&L (USD): **686.33**
+- Daily return (%): **0.1397**
+- Since inception return (%): **0.6785**
 - Max drawdown (%): **-0.8519**
 
 The equity curve below is sourced from the live portfolio engine and reflects actual mark-to-market updates stored in the valuation history.
 
 | Date | NAV (USD) | Daily return (%) | Since inception return (%) | Drawdown (%) | Overlay timestamp |
 |---|---:|---:|---:|---:|---|
+| 2026-04-21 | 100,665.49 | -0.0682 | 0.6655 | -0.8519 | 2026-04-21T21:24:36Z |
 | 2026-04-21 | 100,655.14 | 0.0002 | 0.6551 | -0.8519 | 2026-04-21T22:00:38Z |
 | 2026-04-22 | 100,581.30 | -0.0734 | 0.5813 | -0.8519 | 2026-04-22T21:28:01Z |
 | 2026-04-23 | 100,260.34 | -0.3191 | 0.2603 | -0.8519 | 2026-04-23T17:51:43Z |
 | 2026-04-24 | 100,538.00 | 0.2769 | 0.5380 | -0.8519 | 2026-04-24T21:48:25Z |
+| 2026-04-27 | 100,678.46 | 0.1397 | 0.6785 | -0.8519 | 2026-04-27T23:46:51Z |
 
 `EQUITY_CURVE_CHART_PLACEHOLDER`
 
@@ -146,7 +148,7 @@ The equity curve below is sourced from the live portfolio engine and reflects ac
 **NZD** remains investable and the latest overlay is constructive again, but it still belongs as a smaller supporting sleeve rather than a leadership theme.
 
 **MXN — Buy**  
-**MXN** remains one of the strongest satellite sleeves in the framework. Even after Banxico’s cut to **6.75%**, its carry profile plus renewed confirmation still justify allocation.
+**MXN** remains one of the strongest satellite sleeves in the framework. Even after Banxico easing, its carry profile plus renewed confirmation still justify allocation.
 
 **ZAR — Sell / avoid**  
 **ZAR** remains too weak strategically for allocation inside this framework. Tactical stabilization is still not enough.
@@ -192,7 +194,7 @@ Section 13 is the authoritative target-allocation table for the model portfolio 
 
 ## 14. Position changes executed this run
 
-No **additional executed trades** are recorded in the live implementation engine for this 24 April 2026 run.
+No **additional executed trades** are recorded in the live implementation engine for this 27 April 2026 run.
 
 The authoritative implementation state still reflects the last rebalance dated **2026-04-21**, with **8 trades executed**.
 
@@ -203,28 +205,28 @@ This means:
 
 Implementation note:
 - The live rebalance ledger attributes the last executed trade set to **weekly_fx_review_260421_03.md**.
-- The refreshed 24 April state files confirm the same target structure carried forward from the latest prior production report.
+- The refreshed 27 April state files confirm the same target structure carried forward from the latest prior production report.
 
 ## 15. Current portfolio holdings and cash
 
 - Starting capital (USD): **100,000.00**
-- Invested market value (USD): **76,372.74**
+- Invested market value (USD): **76,513.20**
 - Cash (USD): **24,165.26**
-- Total portfolio value (USD): **100,538.00**
-- Since inception return (%): **0.5380**
+- Total portfolio value (USD): **100,678.46**
+- Since inception return (%): **0.6785**
 - Base currency: **USD**
 
 | Currency sleeve | Implementation pair | Direction | Entry date | Entry price | Current price | Gross exposure (USD) | Unrealized P&L (USD) | Current weight (%) | Stance |
 |---|---|---|---|---:|---:|---:|---:|---:|---|
-| CHF | USD/CHF -> CHFUSD | Long CHF | 2026-03-25 | 1.26781027 | 1.27369065 | 12,019.98 | 55.49 | 11.96 | Hold / stage |
-| JPY | USD/JPY -> JPYUSD | Long JPY | 2026-03-25 | 0.00629622 | 0.00627487 | 5,034.16 | -17.13 | 5.01 | Reduce |
-| CAD | USD/CAD -> CADUSD | Long CAD | 2026-03-25 | 0.72560532 | 0.73144863 | 11,065.08 | 88.40 | 11.01 | Hold / stage |
-| MXN | USD/MXN -> MXNUSD | Long MXN | 2026-03-25 | 0.05680463 | 0.05752760 | 12,035.91 | 151.26 | 11.97 | Buy |
-| AUD | AUD/USD -> AUDUSD | Long AUD | 2026-03-25 | 0.70375383 | 0.71485000 | 13,079.47 | 203.02 | 13.01 | Buy |
-| GBP | GBP/USD -> GBPUSD | Long GBP | 2026-03-25 | 1.34200897 | 1.35317000 | 7,061.66 | 58.24 | 7.02 | Hold / stage |
-| EUR | EUR/USD -> EURUSD | Long EUR | 2026-03-25 | 1.16903261 | 1.17202000 | 11,053.65 | 28.17 | 10.99 | Build on weakness |
-| NZD | NZD/USD -> NZDUSD | Long NZD | 2026-04-21 | 0.59039799 | 0.58787000 | 5,022.83 | -21.60 | 5.00 | Hold / stage |
-| USD cash | — | Long USD cash | 2026-04-21 | 1.00000000 | 1.00000000 | 24,165.26 | 0.00 | 24.04 | Reduce |
+| CHF | USD/CHF -> CHFUSD | Long CHF | 2026-03-25 | 1.26781027 | 1.27318794 | 12,015.23 | 50.75 | 11.93 | Hold / stage |
+| JPY | USD/JPY -> JPYUSD | Long JPY | 2026-03-25 | 0.00629622 | 0.00627279 | 5,032.49 | -18.80 | 5.00 | Reduce |
+| CAD | USD/CAD -> CADUSD | Long CAD | 2026-03-25 | 0.72560532 | 0.73406887 | 11,104.71 | 128.03 | 11.03 | Hold / stage |
+| MXN | USD/MXN -> MXNUSD | Long MXN | 2026-03-25 | 0.05680463 | 0.05753124 | 12,036.67 | 152.02 | 11.96 | Buy |
+| AUD | AUD/USD -> AUDUSD | Long AUD | 2026-03-25 | 0.70375383 | 0.71890000 | 13,153.57 | 277.13 | 13.06 | Buy |
+| GBP | GBP/USD -> GBPUSD | Long GBP | 2026-03-25 | 1.34200897 | 1.35363000 | 7,064.06 | 60.65 | 7.02 | Hold / stage |
+| EUR | EUR/USD -> EURUSD | Long EUR | 2026-03-25 | 1.16903261 | 1.17220000 | 11,055.35 | 29.87 | 10.98 | Build on weakness |
+| NZD | NZD/USD -> NZDUSD | Long NZD | 2026-04-21 | 0.59039799 | 0.59118000 | 5,051.12 | 6.68 | 5.02 | Hold / stage |
+| USD cash | — | Long USD cash | 2026-04-21 | 1.00000000 | 1.00000000 | 24,165.26 | 0.00 | 24.00 | Reduce |
 
 ## 16. Carry-forward input for next run
 
@@ -235,7 +237,7 @@ Implementation note:
 - Run filename: weekly_fx_review_260428.md
 - Base currency: USD
 - Starting capital: 100,000.00
-- Current total portfolio value: 100,538.00
+- Current total portfolio value: 100,678.46
 - Cash: 24,165.26
 - Holdings:
   - USD cash 24.0%
@@ -249,9 +251,9 @@ Implementation note:
   - NZD 5.0%
   - ZAR 0.0%
 - Strategic regime: selective non-USD accumulation / reduced USD overweight / still geopolitics-aware / disciplined rather than broad risk-on
-- Technical overlay state: latest available refresh; USD negative, EUR mixed, GBP strong positive, JPY strong negative, CHF strong positive, AUD strong positive, CAD strong positive, NZD positive, MXN strong positive, ZAR positive
-- Portfolio engine state: live; last valuation date 2026-04-24 and latest portfolio-state overlay timestamp 2026-04-24T21:48:25Z
-- Technical overlay as of: 2026-04-25T13:47:23Z
+- Technical overlay state: latest available refresh; USD negative, EUR mixed, GBP strong positive, JPY strong negative, CHF strong positive, AUD strong positive, CAD strong positive, NZD strong positive, MXN strong positive, ZAR strong positive
+- Portfolio engine state: live; last valuation date 2026-04-27 and latest portfolio-state overlay timestamp 2026-04-27T23:46:51Z
+- Technical overlay as of: 2026-04-27T23:46:51Z
 - Highest-priority adds next run if the regime persists: AUD, CAD, MXN
 - First candidates for rebuild if confirmation broadens further: EUR, GBP, NZD
 - First candidates for reduction if dollar stress returns: AUD, MXN, EUR, NZD, GBP
