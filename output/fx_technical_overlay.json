@@ -1,5 +1,5 @@
 {
-  "as_of_utc": "2026-06-21T10:04:04Z",
+  "as_of_utc": "2026-06-21T14:58:21Z",
   "anchor_currency": "USD",
   "source": "Twelve Data API",
   "rate_limit_config": {
@@ -20,11 +20,11 @@
       "Technical_Score_0_4": 0.15,
       "Technical_Verdict": "strong negative",
       "Evidence": {
-        "latest_close": 1.14779,
-        "d1_ema20": 1.154336,
-        "d1_ema50": 1.159548,
-        "w1_ema13": 1.161014,
-        "w1_ema26": 1.164056,
+        "latest_close": 1.14724,
+        "d1_ema20": 1.154283,
+        "d1_ema50": 1.159526,
+        "w1_ema13": 1.160935,
+        "w1_ema26": 1.164015,
         "recent_d1_median_abs_pct_change": 0.001013,
         "daily_bars_used": 260,
         "weekly_bars_built": 40
@@ -42,11 +42,11 @@
       "Technical_Score_0_4": 0.15,
       "Technical_Verdict": "strong negative",
       "Evidence": {
-        "latest_close": 1.32317,
-        "d1_ema20": 1.334166,
-        "d1_ema50": 1.3396,
-        "w1_ema13": 1.339431,
-        "w1_ema26": 1.340649,
+        "latest_close": 1.32347,
+        "d1_ema20": 1.334195,
+        "d1_ema50": 1.339612,
+        "w1_ema13": 1.339474,
+        "w1_ema26": 1.340671,
         "recent_d1_median_abs_pct_change": 0.000825,
         "daily_bars_used": 260,
         "weekly_bars_built": 40
@@ -64,11 +64,11 @@
       "Technical_Score_0_4": 1.8,
       "Technical_Verdict": "mixed",
       "Evidence": {
-        "latest_close": 0.70085,
-        "d1_ema20": 0.705305,
-        "d1_ema50": 0.708996,
-        "w1_ema13": 0.70642,
-        "w1_ema26": 0.698475,
+        "latest_close": 0.70094,
+        "d1_ema20": 0.705314,
+        "d1_ema50": 0.709,
+        "w1_ema13": 0.706432,
+        "w1_ema26": 0.698482,
         "recent_d1_median_abs_pct_change": 0.001561,
         "daily_bars_used": 260,
         "weekly_bars_built": 40
@@ -77,21 +77,21 @@
     {
       "pair": "NZDUSD",
       "symbol": "NZD/USD",
-      "W1_Bias": "bearish",
+      "W1_Bias": "neutral",
       "D1_Bias": "bearish",
-      "Alignment": "aligned bearish",
+      "Alignment": "mixed",
       "Pivot_Regime": "bearish",
       "Pivot_Zone_Fit": "below pivot",
       "Pivot_Conflict": false,
-      "Technical_Score_0_4": 0.15,
-      "Technical_Verdict": "strong negative",
+      "Technical_Score_0_4": 1.3,
+      "Technical_Verdict": "negative",
       "Evidence": {
-        "latest_close": 0.57388,
-        "d1_ema20": 0.580615,
-        "d1_ema50": 0.584184,
-        "w1_ema13": 0.584121,
-        "w1_ema26": 0.584181,
-        "recent_d1_median_abs_pct_change": 0.001592,
+        "latest_close": 0.57534,
+        "d1_ema20": 0.580755,
+        "d1_ema50": 0.584241,
+        "w1_ema13": 0.58433,
+        "w1_ema26": 0.584289,
+        "recent_d1_median_abs_pct_change": 0.001608,
         "daily_bars_used": 260,
         "weekly_bars_built": 40
       }
@@ -108,11 +108,11 @@
       "Technical_Score_0_4": 3.85,
       "Technical_Verdict": "strong positive",
       "Evidence": {
-        "latest_close": 161.29123,
-        "d1_ema20": 160.47159,
-        "d1_ema50": 159.712491,
-        "w1_ema13": 159.153713,
-        "w1_ema26": 157.771014,
+        "latest_close": 161.32206,
+        "d1_ema20": 160.474526,
+        "d1_ema50": 159.7137,
+        "w1_ema13": 159.158117,
+        "w1_ema26": 157.773297,
         "recent_d1_median_abs_pct_change": 0.000659,
         "daily_bars_used": 260,
         "weekly_bars_built": 40
@@ -130,11 +130,11 @@
       "Technical_Score_0_4": 3.85,
       "Technical_Verdict": "strong positive",
       "Evidence": {
-        "latest_close": 0.80691,
-        "d1_ema20": 0.797928,
-        "d1_ema50": 0.792285,
-        "w1_ema13": 0.790618,
-        "w1_ema26": 0.789561,
+        "latest_close": 0.80646,
+        "d1_ema20": 0.797885,
+        "d1_ema50": 0.792268,
+        "w1_ema13": 0.790554,
+        "w1_ema26": 0.789528,
         "recent_d1_median_abs_pct_change": 0.002145,
         "daily_bars_used": 260,
         "weekly_bars_built": 40
@@ -152,12 +152,12 @@
       "Technical_Score_0_4": 3.85,
       "Technical_Verdict": "strong positive",
       "Evidence": {
-        "latest_close": 1.41615,
-        "d1_ema20": 1.401169,
-        "d1_ema50": 1.389766,
-        "w1_ema13": 1.38593,
-        "w1_ema26": 1.38203,
-        "recent_d1_median_abs_pct_change": 0.000657,
+        "latest_close": 1.41519,
+        "d1_ema20": 1.401077,
+        "d1_ema50": 1.389728,
+        "w1_ema13": 1.385793,
+        "w1_ema26": 1.381959,
+        "recent_d1_median_abs_pct_change": 0.000807,
         "daily_bars_used": 260,
         "weekly_bars_built": 40
       }
@@ -174,11 +174,11 @@
       "Technical_Score_0_4": 0.55,
       "Technical_Verdict": "strong negative",
       "Evidence": {
-        "latest_close": 17.32983,
-        "d1_ema20": 17.321315,
-        "d1_ema50": 17.34896,
-        "w1_ema13": 17.42065,
-        "w1_ema26": 17.57407,
+        "latest_close": 17.33353,
+        "d1_ema20": 17.321667,
+        "d1_ema50": 17.349105,
+        "w1_ema13": 17.421178,
+        "w1_ema26": 17.574344,
         "recent_d1_median_abs_pct_change": 0.001371,
         "daily_bars_used": 260,
         "weekly_bars_built": 40
@@ -188,19 +188,19 @@
       "pair": "USDZAR",
       "symbol": "USD/ZAR",
       "W1_Bias": "bearish",
-      "D1_Bias": "neutral",
-      "Alignment": "mixed",
+      "D1_Bias": "mild bearish",
+      "Alignment": "aligned bearish",
       "Pivot_Regime": "neutral",
       "Pivot_Zone_Fit": "around pivot",
       "Pivot_Conflict": false,
-      "Technical_Score_0_4": 1.2,
-      "Technical_Verdict": "negative",
+      "Technical_Score_0_4": 0.55,
+      "Technical_Verdict": "strong negative",
       "Evidence": {
-        "latest_close": 16.44833,
-        "d1_ema20": 16.391418,
-        "d1_ema50": 16.431803,
-        "w1_ema13": 16.494607,
-        "w1_ema26": 16.588718,
+        "latest_close": 16.41879,
+        "d1_ema20": 16.388605,
+        "d1_ema50": 16.430645,
+        "w1_ema13": 16.490387,
+        "w1_ema26": 16.58653,
         "recent_d1_median_abs_pct_change": 0.002528,
         "daily_bars_used": 260,
         "weekly_bars_built": 40
@@ -209,13 +209,13 @@
   ],
   "currencies": {
     "USD": {
-      "ta_score": 1.0,
+      "ta_score": 0.78,
       "ta_status": "positive",
       "primary_pair_evidence": [
         "EURUSD -> inverse of strong negative",
         "GBPUSD -> inverse of strong negative",
         "AUDUSD -> inverse of mixed",
-        "NZDUSD -> inverse of strong negative"
+        "NZDUSD -> inverse of negative"
       ],
       "confirmation_flag": "confirming"
     },
@@ -268,10 +268,10 @@
       "confirmation_flag": "confirming"
     },
     "NZD": {
-      "ta_score": -2.0,
-      "ta_status": "strong negative",
+      "ta_score": -1.0,
+      "ta_status": "negative",
       "primary_pair_evidence": [
-        "NZDUSD -> strong negative"
+        "NZDUSD -> negative"
       ],
       "confirmation_flag": "confirming"
     },
@@ -284,10 +284,10 @@
       "confirmation_flag": "confirming"
     },
     "ZAR": {
-      "ta_score": 1.0,
-      "ta_status": "positive",
+      "ta_score": 2.0,
+      "ta_status": "strong positive",
       "primary_pair_evidence": [
-        "USDZAR -> inverse of negative"
+        "USDZAR -> inverse of strong negative"
       ],
       "confirmation_flag": "confirming"
     }
