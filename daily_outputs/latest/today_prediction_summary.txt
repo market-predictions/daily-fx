@@ -1,8 +1,8 @@
 # today_prediction_summary
 
 prediction_score_version: v5.5_prediction_quality_v2
-prediction_reference_timestamp: 2026-06-21 14:43:24
-snapshot_date: 2026-06-21
+prediction_reference_timestamp: 2026-06-23 10:05:08
+snapshot_date: 2026-06-23
 prediction_top_n: 8
 
 ## integrity
@@ -14,19 +14,19 @@ prediction_top_n: 8
 - shadow_watchlist_rows_in_prediction_snapshot: 0
 
 ## ranking
-1. NZDCAD | side=LONG | grade10=5.15 | grade100=51.5 | band=C | entry=0.8127 | sl=0.8114 | tp1=0.8144 | tp2=0.8157
-2. GBPUSD | side=SHORT | grade10=3.71 | grade100=37.1 | band=D | entry=1.3237 | sl=1.3317 | tp1=1.3139 | tp2=1.3063
-3. AUDNZD | side=LONG | grade10=3.47 | grade100=34.7 | band=D | entry=1.2205 | sl=1.2195 | tp1=1.2216 | tp2=1.2225
-4. GBPJPY | side=SHORT | grade10=3.32 | grade100=33.2 | band=D | entry=213.521 | sl=213.689 | tp1=213.318 | tp2=213.16
-5. USDCHF | side=LONG | grade10=2.98 | grade100=29.8 | band=D | entry=0.806 | sl=0.8052 | tp1=0.807 | tp2=0.8077
-6. AUDCHF | side=LONG | grade10=2.67 | grade100=26.7 | band=D | entry=0.5651 | sl=0.5646 | tp1=0.5656 | tp2=0.566
-7. EURCHF | side=LONG | grade10=2.43 | grade100=24.3 | band=E | entry=0.9248 | sl=0.9241 | tp1=0.9257 | tp2=0.9264
-8. GBPCAD | side=LONG | grade10=1.64 | grade100=16.4 | band=E | entry=1.8731 | sl=1.8708 | tp1=1.876 | tp2=1.8782
-9. EURAUD | side=LONG | grade10=1.31 | grade100=13.1 | band=E | entry=1.6366 | sl=1.6345 | tp1=1.6391 | tp2=1.641
-10. CADJPY | side=SHORT | grade10=1.24 | grade100=12.4 | band=E | entry=113.992 | sl=114.134 | tp1=113.819 | tp2=113.684
-11. USDCAD | side=LONG | grade10=0.84 | grade100=8.4 | band=E | entry=1.4152 | sl=1.4141 | tp1=1.4165 | tp2=1.4175
-12. EURGBP | side=LONG | grade10=0.8 | grade100=8.0 | band=E | entry=0.8667 | sl=0.866 | tp1=0.8675 | tp2=0.8682
-13. EURJPY | side=LONG | grade10=0.32 | grade100=3.2 | band=E | entry=185.057 | sl=184.913 | tp1=185.233 | tp2=185.37
-14. AUDUSD | side=SHORT | grade10=0.0 | grade100=0.0 | band=E | entry=0.701 | sl=0.7042 | tp1=0.6971 | tp2=0.6941
-15. USDJPY | side=SHORT | grade10=0.0 | grade100=0.0 | band=E | entry=161.315 | sl=161.441 | tp1=161.162 | tp2=161.043
-16. EURUSD | side=LONG | grade10=0.0 | grade100=0.0 | band=E | entry=1.1472 | sl=1.1463 | tp1=1.1483 | tp2=1.1492
+1. EURJPY | side=SHORT | grade10=5.98 | grade100=59.8 | band=B | entry=184.167 | sl=184.376 | tp1=183.912 | tp2=183.713
+2. EURUSD | side=SHORT | grade10=5.81 | grade100=58.1 | band=B | entry=1.1412 | sl=1.1471 | tp1=1.1339 | tp2=1.1283
+3. GBPCAD | side=LONG | grade10=4.13 | grade100=41.3 | band=C | entry=1.876 | sl=1.8734 | tp1=1.8791 | tp2=1.8815
+4. USDCHF | side=LONG | grade10=3.88 | grade100=38.8 | band=D | entry=0.81 | sl=0.8088 | tp1=0.8113 | tp2=0.8124
+5. AUDUSD | side=SHORT | grade10=3.73 | grade100=37.3 | band=D | entry=0.6956 | sl=0.6985 | tp1=0.6922 | tp2=0.6894
+6. USDJPY | side=LONG | grade10=3.39 | grade100=33.9 | band=D | entry=161.393 | sl=161.062 | tp1=161.794 | tp2=162.107
+7. USDCAD | side=LONG | grade10=3.26 | grade100=32.6 | band=D | entry=1.4182 | sl=1.4171 | tp1=1.4195 | tp2=1.4205
+8. NZDCAD | side=SHORT | grade10=3.05 | grade100=30.5 | band=D | entry=0.8075 | sl=0.8082 | tp1=0.8068 | tp2=0.8062
+9. AUDNZD | side=LONG | grade10=2.28 | grade100=22.8 | band=E | entry=1.2219 | sl=1.2204 | tp1=1.2239 | tp2=1.2254
+10. EURGBP | side=SHORT | grade10=1.65 | grade100=16.5 | band=E | entry=0.8626 | sl=0.8633 | tp1=0.8617 | tp2=0.861
+11. EURCHF | side=SHORT | grade10=1.51 | grade100=15.1 | band=E | entry=0.9241 | sl=0.9248 | tp1=0.9232 | tp2=0.9226
+12. AUDCHF | side=SHORT | grade10=1.27 | grade100=12.7 | band=E | entry=0.5636 | sl=0.564 | tp1=0.563 | tp2=0.5626
+13. GBPUSD | side=LONG | grade10=0.48 | grade100=4.8 | band=E | entry=1.3229 | sl=1.3218 | tp1=1.3241 | tp2=1.3251
+14. EURAUD | side=SHORT | grade10=0.43 | grade100=4.3 | band=E | entry=1.64 | sl=1.6413 | tp1=1.6384 | tp2=1.6372
+15. CADJPY | side=LONG | grade10=0.21 | grade100=2.1 | band=E | entry=113.819 | sl=113.73 | tp1=113.928 | tp2=114.012
+16. GBPJPY | side=LONG | grade10=0.17 | grade100=1.7 | band=E | entry=213.508 | sl=213.316 | tp1=213.742 | tp2=213.923
