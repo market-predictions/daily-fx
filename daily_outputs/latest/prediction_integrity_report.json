@@ -2,8 +2,8 @@
   "snapshot_meta": {
     "prediction_enabled": true,
     "prediction_score_version": "v5.5_prediction_quality_v2",
-    "prediction_reference_timestamp": "2026-09-03 16:40:42",
-    "snapshot_date": "2026-09-03",
+    "prediction_reference_timestamp": "2026-09-05 15:28:20",
+    "snapshot_date": "2026-09-05",
     "prediction_input_fields": [
       "Instrument",
       "Preferred_Side",
