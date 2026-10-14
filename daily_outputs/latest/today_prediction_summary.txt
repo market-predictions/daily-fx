@@ -1,7 +1,7 @@
 # today_prediction_summary
 
 prediction_score_version: v5.5_prediction_quality_v2
-prediction_reference_timestamp: 2026-10-14 11:45:45
+prediction_reference_timestamp: 2026-10-14 17:28:43
 snapshot_date: 2026-10-14
 prediction_top_n: 8
 
@@ -14,19 +14,19 @@ prediction_top_n: 8
 - shadow_watchlist_rows_in_prediction_snapshot: 0
 
 ## ranking
-1. EURUSD | side=SHORT | grade10=4.04 | grade100=40.4 | band=C | entry=1.1194 | sl=1.1203 | tp1=1.1183 | tp2=1.1175
-2. CADJPY | side=LONG | grade10=3.88 | grade100=38.8 | band=D | entry=111.449 | sl=111.362 | tp1=111.554 | tp2=111.636
-3. EURJPY | side=SHORT | grade10=3.5 | grade100=35.0 | band=D | entry=177.382 | sl=177.521 | tp1=177.214 | tp2=177.083
-4. USDCAD | side=SHORT | grade10=3.45 | grade100=34.5 | band=D | entry=1.422 | sl=1.4231 | tp1=1.4207 | tp2=1.4196
-5. AUDUSD | side=LONG | grade10=3.35 | grade100=33.5 | band=D | entry=0.7006 | sl=0.6999 | tp1=0.7015 | tp2=0.7021
-6. GBPJPY | side=LONG | grade10=2.89 | grade100=28.9 | band=D | entry=210.127 | sl=209.964 | tp1=210.326 | tp2=210.48
-7. AUDCHF | side=LONG | grade10=2.42 | grade100=24.2 | band=E | entry=0.5838 | sl=0.5833 | tp1=0.5843 | tp2=0.5847
-8. EURCHF | side=LONG | grade10=1.59 | grade100=15.9 | band=E | entry=0.9329 | sl=0.9321 | tp1=0.9337 | tp2=0.9344
-9. GBPCAD | side=SHORT | grade10=1.53 | grade100=15.3 | band=E | entry=1.8854 | sl=1.8869 | tp1=1.8836 | tp2=1.8822
-10. USDJPY | side=SHORT | grade10=1.31 | grade100=13.1 | band=E | entry=158.455 | sl=158.579 | tp1=158.305 | tp2=158.188
-11. GBPUSD | side=LONG | grade10=1.08 | grade100=10.8 | band=E | entry=1.326 | sl=1.325 | tp1=1.3273 | tp2=1.3283
-12. NZDCAD | side=LONG | grade10=0.82 | grade100=8.2 | band=E | entry=0.7981 | sl=0.7975 | tp1=0.7989 | tp2=0.7995
-13. EURGBP | side=SHORT | grade10=0.48 | grade100=4.8 | band=E | entry=0.8441 | sl=0.8452 | tp1=0.8429 | tp2=0.8419
-14. EURAUD | side=LONG | grade10=0.0 | grade100=0.0 | band=E | entry=1.5978 | sl=1.5965 | tp1=1.5993 | tp2=1.6005
-15. USDCHF | side=SHORT | grade10=0.0 | grade100=0.0 | band=E | entry=0.8334 | sl=0.8341 | tp1=0.8326 | tp2=0.832
-16. AUDNZD | side=SHORT | grade10=0.0 | grade100=0.0 | band=E | entry=1.2482 | sl=1.2491 | tp1=1.247 | tp2=1.2461
+1. AUDCHF | side=LONG | grade10=3.64 | grade100=36.4 | band=D | entry=0.5829 | sl=0.5824 | tp1=0.5834 | tp2=0.5838
+2. EURJPY | side=SHORT | grade10=3.36 | grade100=33.6 | band=D | entry=176.661 | sl=176.8 | tp1=176.492 | tp2=176.361
+3. EURGBP | side=SHORT | grade10=3.32 | grade100=33.2 | band=D | entry=0.8456 | sl=0.8467 | tp1=0.8442 | tp2=0.8431
+4. EURUSD | side=SHORT | grade10=3.3 | grade100=33.0 | band=D | entry=1.1135 | sl=1.1144 | tp1=1.1125 | tp2=1.1116
+5. GBPCAD | side=SHORT | grade10=2.54 | grade100=25.4 | band=D | entry=1.8773 | sl=1.8788 | tp1=1.8755 | tp2=1.8741
+6. CADJPY | side=LONG | grade10=2.43 | grade100=24.3 | band=E | entry=111.275 | sl=111.188 | tp1=111.38 | tp2=111.462
+7. EURCHF | side=LONG | grade10=1.97 | grade100=19.7 | band=E | entry=0.9321 | sl=0.9314 | tp1=0.933 | tp2=0.9337
+8. AUDUSD | side=LONG | grade10=1.54 | grade100=15.4 | band=E | entry=0.6963 | sl=0.6956 | tp1=0.6971 | tp2=0.6977
+9. GBPJPY | side=LONG | grade10=1.11 | grade100=11.1 | band=E | entry=208.91 | sl=208.747 | tp1=209.109 | tp2=209.263
+10. EURAUD | side=LONG | grade10=0.53 | grade100=5.3 | band=E | entry=1.5992 | sl=1.5979 | tp1=1.6007 | tp2=1.6019
+11. USDCAD | side=SHORT | grade10=0.11 | grade100=1.1 | band=E | entry=1.4257 | sl=1.4268 | tp1=1.4243 | tp2=1.4233
+12. USDJPY | side=SHORT | grade10=0.1 | grade100=1.0 | band=E | entry=158.673 | sl=158.797 | tp1=158.523 | tp2=158.406
+13. AUDNZD | side=SHORT | grade10=0.1 | grade100=1.0 | band=E | entry=1.2479 | sl=1.2489 | tp1=1.2467 | tp2=1.2458
+14. USDCHF | side=SHORT | grade10=0.0 | grade100=0.0 | band=E | entry=0.8373 | sl=0.838 | tp1=0.8365 | tp2=0.8359
+15. GBPUSD | side=LONG | grade10=0.0 | grade100=0.0 | band=E | entry=1.3168 | sl=1.3157 | tp1=1.318 | tp2=1.319
+16. NZDCAD | side=LONG | grade10=0.0 | grade100=0.0 | band=E | entry=0.7956 | sl=0.795 | tp1=0.7963 | tp2=0.7969
